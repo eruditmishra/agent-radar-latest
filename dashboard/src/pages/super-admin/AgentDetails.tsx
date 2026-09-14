@@ -195,7 +195,7 @@ export default function AgentDetails() {
         return { label: "Unrated", className: "bg-slate-200 text-slate-600" };
     }
   };
-  const violationSeverityRank = { Critical: 3, Risk: 2, Info: 1, Unrated: 0 };
+  const violationSeverityRank: Record<string, number> = { Critical: 3, Risk: 2, Info: 1, Unrated: 0 };
   const highestViolationSeverity = violations.reduce(
     (highest, v) => {
       const sev = getViolationSeverity(v.findingType);
