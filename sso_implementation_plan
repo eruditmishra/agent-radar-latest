@@ -1,0 +1,146 @@
+# Microsoft SSO (Entra ID / Azure AD) Integration
+
+## Background
+
+AgentRadar currently uses email + password authentication backed by a JWT access/refresh token pair. The `users` table stores a `password_hash` (NOT NULL), a `role`, and a `tenant_id`. The goal is to let enterprise users sign in via their Microsoft 365 / company Azure AD account and automatically land in the correct role — with zero changes required to the JWT/refresh flow that the rest of the app already uses.
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Which SSO flow to use?**
+> - **Option A — OAuth 2.0 Authorization Code flow (recommended)**: Redirect to Microsoft login → Microsoft redirects back to AgentRadar with an auth code → backend exchanges code for ID token → issue our own JWT. Most secure, works for any deployment.
+> - **Option B — MSAL.js on the frontend only**: Microsoft SDK runs in the browser, gets an ID token, sends it to our backend which just verifies and issues JWT. Simpler frontend setup, slightly less backend control.
+>
+> The plan below assumes **Option A** (backend-initiated OIDC). Let me know if you prefer the frontend-only MSAL approach.
+
+> [!IMPORTANT]
+> **How should role assignment work for new SSO users?**
+> - **Option 1 — Default role on first login**: All first-time Microsoft SSO users get `analyst` role by default. A super-admin can promote them later.
+> - **Option 2 — Azure AD Group mapping**: Map Azure AD security groups to AgentRadar roles (e.g., `AgentRadar-Admins` group → `admin`, `AgentRadar-Analysts` group → `analyst`). Requires extra Azure AD API call during login.
+> - **Option 3 — Email domain whitelisting only**: Users from your company domain auto-get a role you configure at the tenant level.
+>
+> I recommend **Option 1** as the safest starting point, with a path to Option 2.
+
+> [!IMPORTANT]
+> **Which Azure AD tenant(s) to allow?**
+> - **Single-tenant**: Only users from your one organization can sign in (most common for internal tooling).
+> - **Multi-tenant**: Any Microsoft organization's users can sign in (useful if you sell to multiple companies).
+>
+> I'll plan for **single-tenant** but the config will be easy to switch.
+
+---
+
+## Proposed Changes
+
+### DB Migration
+
+#### [MODIFY] `users` table schema
+- Add `microsoft_oid` (`text`, unique, nullable) — stores the Azure AD object ID for SSO-linked accounts.
+- Make `password_hash` nullable — SSO users won't have a password.
+
+```sql
+ALTER TABLE users ADD COLUMN microsoft_oid TEXT UNIQUE;
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+```
+
+---
+
+### Backend
+
+#### [NEW] `server/src/modules/auth/microsoft.strategy.ts`
+- Validates the Microsoft authorization code against Azure AD's OIDC endpoint.
+- Extracts `oid` (object ID), `email`, `name` from the ID token claims.
+- Performs upsert: find user by `microsoft_oid` OR by email — if found, link; if not found, create with default role.
+- Returns the same `{ accessToken, refreshToken }` pair as the existing `login()` function.
+
+#### [MODIFY] [auth.routes.ts](file:///d:/citius/agentradar/server/src/modules/auth/auth.routes.ts)
+- Add `GET /auth/microsoft` — redirects user's browser to Microsoft's authorization URL with correct client_id, tenant, scopes (`openid profile email`).
+- Add `GET /auth/microsoft/callback` — receives the auth code from Microsoft, calls `microsoft.strategy.ts`, sets tokens in cookies / returns them in body.
+
+#### [MODIFY] [auth.service.ts](file:///d:/citius/agentradar/server/src/modules/auth/auth.service.ts)
+- Add `loginWithMicrosoft(idTokenClaims)` function — runs the upsert logic and calls existing `issueTokenPair()`.
+
+#### [MODIFY] [auth.repo.ts](file:///d:/citius/agentradar/server/src/modules/auth/auth.repo.ts)
+- Add `findUserByMicrosoftOid(oid: string)` query.
+- Add `createOrLinkMicrosoftUser(tenantId, email, oid, name)` upsert query.
+
+#### [MODIFY] [auth.types.ts](file:///d:/citius/agentradar/server/src/modules/auth/auth.types.ts)
+- Add `MicrosoftIdTokenClaims` interface (`oid`, `email`, `name`, `preferred_username`, `tid`).
+
+#### [MODIFY] `.env` / config
+- `MICROSOFT_CLIENT_ID` — from Azure App Registration
+- `MICROSOFT_CLIENT_SECRET` — from Azure App Registration
+- `MICROSOFT_TENANT_ID` — your organization's Azure tenant ID
+- `MICROSOFT_REDIRECT_URI` — e.g., `https://your-app.com/auth/microsoft/callback`
+
+---
+
+### Frontend
+
+#### [MODIFY] [LoginScreen.tsx](file:///d:/citius/agentradar/dashboard/src/pages/shared/LoginScreen.tsx)
+- Add a **"Continue with Microsoft"** button below the existing email/password form, styled with the official Microsoft branding (blue `#0078D4`, Microsoft logo icon).
+- Clicking it redirects to `GET /api/auth/microsoft` on the backend.
+- On return from Microsoft callback, the backend issues tokens and redirects to `/dashboard` (or the frontend reads them from URL params and stores them in the auth store).
+
+#### [MODIFY] [api.ts](file:///d:/citius/agentradar/dashboard/src/lib/api.ts)
+- Add `authAPI.getMicrosoftLoginUrl()` helper (calls `GET /api/auth/microsoft` to get the redirect URL).
+
+---
+
+## How the Full Flow Works
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Microsoft
+
+    User->>Frontend: Click "Continue with Microsoft"
+    Frontend->>Backend: GET /api/auth/microsoft
+    Backend->>Frontend: 302 Redirect to login.microsoftonline.com
+    User->>Microsoft: Sign in with company account
+    Microsoft->>Backend: GET /api/auth/microsoft/callback?code=...
+    Backend->>Microsoft: POST /token (exchange code for ID token)
+    Microsoft->>Backend: ID token (oid, email, name, role claims)
+    Backend->>Backend: Upsert user, issue JWT pair
+    Backend->>Frontend: Redirect to /dashboard with token
+    Frontend->>User: Logged in!
+```
+
+---
+
+## Role Assignment Logic
+
+| Scenario | Result |
+|---|---|
+| First SSO login, no existing account | Create new user with role `analyst` |
+| First SSO login, email already exists in DB (password user) | Link `microsoft_oid` to existing account, preserve existing role |
+| Subsequent SSO login | Find by `microsoft_oid`, issue tokens with existing role |
+| SSO user tries password login | Rejected — no `password_hash` on record |
+
+---
+
+## Azure Setup Required (One-time, by you)
+
+1. Go to **Azure Portal → App Registrations → New Registration**
+2. Set redirect URI to `https://your-domain.com/api/auth/microsoft/callback`
+3. Under **Certificates & Secrets**, create a client secret
+4. Under **API Permissions**, add `openid`, `profile`, `email` (all Microsoft Graph, delegated)
+5. Copy **Application (client) ID**, **Directory (tenant) ID**, and the **client secret** into `.env`
+
+---
+
+## Verification Plan
+
+### Automated
+- Unit test: `microsoft.strategy.ts` with a mocked ID token → correct upsert behaviour
+- Integration test: `POST /auth/microsoft/callback` with a test code → valid JWT returned
+
+### Manual
+- Sign in via Microsoft button → redirected to Microsoft login → returns to dashboard
+- Confirm correct role is shown (analyst for new user)
+- Sign in again → same account, no duplicate created in `users` table
+- Existing password user with same email links correctly → still can see their role
