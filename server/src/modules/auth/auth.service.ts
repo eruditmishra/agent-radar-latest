@@ -12,6 +12,7 @@ import {
   createOrLinkMicrosoftUser,
   createOrLinkSsoUser,
   updateLastLogin,
+  invalidateTokensBefore,
 } from "./auth.repo";
 import {
   AccessTokenPayload,
@@ -26,6 +27,7 @@ import { MFA_ENFORCEMENT_ENABLED } from "../../rbac/rbac.middleware";
 
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of inactivity ends the session
 
 function signAccessToken(
   payload: Omit<AccessTokenPayload, "type">,
@@ -223,6 +225,12 @@ export async function refresh(rawRefreshToken: string) {
     throw new Error("REFRESH_TOKEN_REUSE_DETECTED");
   }
 
+  const lastUsedAt = stored.last_used_at ? new Date(stored.last_used_at) : stored.created_at;
+  if (Date.now() - lastUsedAt.getTime() > IDLE_TIMEOUT_MS) {
+    await revokeAllUserTokens(payload.sub);
+    throw new Error("SESSION_IDLE_TIMEOUT");
+  }
+
   await revokeRefreshToken(payload.jti);
 
   const user = await findUserById(payload.sub);
@@ -245,6 +253,9 @@ export async function refresh(rawRefreshToken: string) {
 
 export async function logout(userId: string) {
   await revokeAllUserTokens(userId);
+  // Also invalidate any access token already issued — those are stateless
+  // JWTs that would otherwise stay valid for their full 15-minute TTL.
+  await invalidateTokensBefore(userId, new Date());
 }
 
 export async function getUser(userId: string) {

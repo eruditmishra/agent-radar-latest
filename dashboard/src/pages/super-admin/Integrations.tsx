@@ -7,6 +7,7 @@ import type {
 } from "../../types/integration";
 import { INTEGRATION_PROVIDERS } from "../../components/super_admin/integrations/providers";
 import ProviderModal from "../../components/super_admin/integrations/ProviderModal";
+import BrandIcon from "../../components/super_admin/integrations/BrandIcon";
 import { useEffect, useState } from "react";
 
 const ALL_CATS = [
@@ -309,10 +310,10 @@ export default function Integrations() {
 
               <div className="flex items-start gap-4 z-10">
                 <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 shadow-sm"
+                  className="w-12 h-12 rounded-xl flex items-center justify-center p-2 shrink-0 shadow-sm transition-transform duration-200 group-hover:scale-105"
                   style={{ backgroundColor: provider.color + "18" }}
                 >
-                  {provider.icon}
+                  <BrandIcon providerId={provider.id} className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-[14px] text-text-primary mb-0.5 truncate">

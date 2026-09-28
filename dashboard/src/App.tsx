@@ -5,6 +5,7 @@ import MfaGate from './pages/shared/MfaGate';
 import AppShell from './components/shared/AppShell';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import useTelemetry from './hooks/useTelemetry';
+import useIdleTimeout from './hooks/useIdleTimeout';
 import { getDefaultRoute } from './lib/permissions';
 
 // ── Shared Pages ──────────────────────────────────────────────────────────────
@@ -33,6 +34,8 @@ export default function App() {
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const mfaPending = useStore((s) => s.mfaPending);
   const user = useStore((s) => s.user);
+
+  useIdleTimeout(isLoggedIn && !mfaPending);
 
   if (mfaPending) {
     return <MfaGate />;

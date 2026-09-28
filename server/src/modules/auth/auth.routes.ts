@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import {
   signupHandler,
   loginHandler,
@@ -21,10 +22,21 @@ import { requirePermission, requireSuperAdmin } from "../../rbac/rbac.middleware
 
 const router = Router();
 
+// Brute-force protection for credential-guessing endpoints. In-memory store
+// is fine for the current single-instance deployment; a shared store (e.g.
+// Redis) would be needed if this scales horizontally.
+const authBruteForceLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: "Too many attempts. Please try again later." },
+});
+
 // ─── Direct Login (Super Admin only) ─────────────────────────────────────────
 // Signup creates a super_admin account. Login enforces super_admin role only.
-router.post("/signup", signupHandler);
-router.post("/login", loginHandler);
+router.post("/signup", authBruteForceLimiter, signupHandler);
+router.post("/login", authBruteForceLimiter, loginHandler);
 router.post("/refresh", refreshHandler);
 router.post("/logout", requireAuth, logoutHandler);
 router.get("/me", requireAuth, meHandler);

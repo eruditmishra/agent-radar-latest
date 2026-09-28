@@ -106,7 +106,7 @@ export async function storeRefreshToken(
   expiresAt: Date,
 ) {
   await db.query(
-    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)`,
+    `INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, last_used_at) VALUES ($1, $2, $3, $4, now())`,
     [tokenId, userId, hashToken(rawToken), expiresAt],
   );
 }
@@ -137,6 +137,25 @@ export async function revokeAllUserTokens(userId: string) {
     `UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL`,
     [userId],
   );
+}
+
+/**
+ * Invalidates every access token already issued to this user (they'll fail
+ * requireAuth's iat check) without needing a separate token-blacklist store.
+ */
+export async function invalidateTokensBefore(userId: string, when: Date) {
+  await db.query(
+    `UPDATE users SET tokens_valid_after = $2 WHERE id = $1`,
+    [userId, when],
+  );
+}
+
+export async function getTokensValidAfter(userId: string): Promise<Date | null> {
+  const res = await db.query(
+    `SELECT tokens_valid_after FROM users WHERE id = $1`,
+    [userId],
+  );
+  return res.rows[0]?.tokens_valid_after ?? null;
 }
 
 /**

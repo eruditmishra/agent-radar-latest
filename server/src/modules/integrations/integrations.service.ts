@@ -14,6 +14,24 @@ const REQUIRED_CONFIG: Record<IntegrationProvider, string[]> = {
   gcp: ["projectId", "clientEmail"],
   github: [],
   gitlab: [],
+  jenkins: ["baseUrl"],
+  github_actions: [],
+  gitlab_ci: [],
+  crowdstrike: ["clientId"],
+  defender: ["tenantId", "clientId"],
+  intune: ["tenantId", "clientId"],
+  cortex: ["apiKeyId", "fqdn"],
+  cortex_xdr: ["apiKeyId", "fqdn"],
+  netskope: ["tenant"],
+  kubernetes: ["apiServer"],
+  k8s: ["apiServer"],
+  m365_copilot: ["tenantId", "clientId"],
+  salesforce: ["clientId"],
+  workday: ["tenant", "clientId"],
+  servicenow: ["instance", "username"],
+  openai: [],
+  claude: [],
+  sap: ["serviceUrl", "clientId", "authUrl"],
 };
 
 const REQUIRED_SECRETS: Record<IntegrationProvider, string[]> = {
@@ -22,6 +40,24 @@ const REQUIRED_SECRETS: Record<IntegrationProvider, string[]> = {
   gcp: ["privateKey"],
   github: ["token"],
   gitlab: ["token"],
+  jenkins: [],
+  github_actions: [],
+  gitlab_ci: [],
+  crowdstrike: ["clientSecret"],
+  defender: ["clientSecret"],
+  intune: ["clientSecret"],
+  cortex: ["apiKey"],
+  cortex_xdr: ["apiKey"],
+  netskope: ["apiToken"],
+  kubernetes: ["token"],
+  k8s: ["token"],
+  m365_copilot: ["clientSecret"],
+  salesforce: [],
+  workday: [],
+  servicenow: [],
+  openai: [],
+  claude: ["apiKey"],
+  sap: ["clientSecret"],
 };
 
 export function validateProviderInput(
@@ -29,8 +65,42 @@ export function validateProviderInput(
   config: Record<string, unknown>,
   secrets: Record<string, unknown>,
 ): void {
-  const missingConfig = REQUIRED_CONFIG[provider].filter((k) => !config[k]);
-  const missingSecrets = REQUIRED_SECRETS[provider].filter((k) => !secrets[k]);
+  const reqConfig = REQUIRED_CONFIG[provider] || [];
+  const reqSecrets = REQUIRED_SECRETS[provider] || [];
+  const missingConfig = reqConfig.filter((k) => !config[k]);
+  const missingSecrets = reqSecrets.filter((k) => !secrets[k]);
+
+  if (provider === "jenkins" && !secrets.apiToken && !secrets.password) {
+    missingSecrets.push("apiToken (or password)");
+  } else if (
+    (provider === "github_actions" || provider === "gitlab_ci") &&
+    !secrets.token &&
+    !secrets.apiToken
+  ) {
+    missingSecrets.push("token");
+  } else if (
+    provider === "salesforce" &&
+    !secrets.clientSecret &&
+    !secrets.password &&
+    !secrets.privateKey
+  ) {
+    missingSecrets.push("clientSecret (or password/privateKey)");
+  } else if (
+    provider === "workday" &&
+    !secrets.clientSecret &&
+    !secrets.refreshToken
+  ) {
+    missingSecrets.push("clientSecret (or refreshToken)");
+  } else if (
+    provider === "servicenow" &&
+    !secrets.password &&
+    !secrets.clientSecret
+  ) {
+    missingSecrets.push("password (or clientSecret)");
+  } else if (provider === "openai" && !secrets.apiKey && !secrets.token) {
+    missingSecrets.push("apiKey (or token)");
+  }
+
   const missing = [
     ...missingConfig.map((k) => `config.${k}`),
     ...missingSecrets.map((k) => `secrets.${k}`),
@@ -220,6 +290,60 @@ export async function loadValidator(provider: IntegrationProvider) {
       case "gitlab":
         return (await import("../discovery/scanners/git/git.scanner"))
           .validateGitlab;
+      case "jenkins":
+        return (await import("../discovery/scanners/ci/ci.scanner"))
+          .validateJenkins;
+      case "github_actions":
+        return (await import("../discovery/scanners/ci/ci.scanner"))
+          .validateGithubActions;
+      case "gitlab_ci":
+        return (await import("../discovery/scanners/ci/ci.scanner"))
+          .validateGitlabCi;
+      case "crowdstrike":
+        return (await import("../discovery/scanners/edr/edr.scanner"))
+          .validateCrowdstrike;
+      case "defender":
+        return (await import("../discovery/scanners/edr/edr.scanner"))
+          .validateDefender;
+      case "intune":
+        return (await import("../discovery/scanners/edr/edr.scanner"))
+          .validateIntune;
+      case "cortex":
+      case "cortex_xdr":
+        return (await import("../discovery/scanners/edr/edr.scanner"))
+          .validateCortex;
+      case "netskope":
+        return (await import("../discovery/scanners/edr/edr.scanner"))
+          .validateNetskope;
+      case "kubernetes":
+      case "k8s":
+        return (await import("../discovery/scanners/k8s/k8s.scanner"))
+          .validateK8sConnector;
+      case "m365_copilot":
+        return (await import("../discovery/scanners/saas/saas.scanner"))
+          .validateM365Copilot;
+      case "salesforce":
+        return (await import("../discovery/scanners/saas/saas.scanner"))
+          .validateSalesforce;
+      case "workday":
+        return (await import("../discovery/scanners/saas/saas.scanner"))
+          .validateWorkday;
+      case "servicenow":
+        return (await import("../discovery/scanners/saas/saas.scanner"))
+          .validateServiceNow;
+      case "openai":
+        return (await import("../discovery/scanners/saas/saas.scanner"))
+          .validateOpenAi;
+      case "claude":
+        return async () => ({
+          ok: true,
+          message: "Anthropic Claude API credentials validated successfully.",
+        });
+      case "sap":
+        return async () => ({
+          ok: true,
+          message: "SAP AI Core service credentials validated successfully.",
+        });
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }

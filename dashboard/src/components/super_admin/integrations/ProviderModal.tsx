@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Plus, Trash2, Activity, Play, ChevronLeft, Pencil } from "lucide-react";
 import type { ProviderCatalogItem, IntegrationConnectionView } from "../../../types/integration";
+import BrandIcon from "./BrandIcon";
 
 interface ProviderModalProps {
   isOpen: boolean;
@@ -155,10 +156,10 @@ export default function ProviderModal({
             )}
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shrink-0"
+                className="w-10 h-10 rounded-lg flex items-center justify-center p-1.5 shrink-0"
                 style={{ backgroundColor: provider.color + "18" }}
               >
-                {provider.icon}
+                <BrandIcon providerId={provider.id} className="w-full h-full object-contain" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-text-primary leading-tight">

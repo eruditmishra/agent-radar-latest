@@ -3,7 +3,7 @@ import type { ProviderCatalogItem } from "../../../types/integration";
 export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
   // ── Cloud Providers ──────────────────────────────────────────────────────────
   {
-    id: 'azure', name: 'Microsoft Azure', cat: 'Cloud Provider', icon: '🔷',
+    id: 'azure', name: 'Microsoft Azure', cat: 'Cloud Provider', icon: 'azure',
     desc: 'Discover AI workloads across Azure Cognitive Services, OpenAI, and ML Studio',
     color: '#0078d4',
     fields: [
@@ -14,7 +14,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'aws', name: 'Amazon AWS', cat: 'Cloud Provider', icon: '🟠',
+    id: 'aws', name: 'Amazon AWS', cat: 'Cloud Provider', icon: 'aws',
     desc: 'Discover AI agents running on SageMaker, Bedrock, Lambda, and ECS',
     color: '#ff9900',
     fields: [
@@ -26,7 +26,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'gcp', name: 'Google Cloud', cat: 'Cloud Provider', icon: '🟢',
+    id: 'gcp', name: 'Google Cloud', cat: 'Cloud Provider', icon: 'gcp',
     desc: 'Discover AI models on Vertex AI, Cloud AI APIs, and Gemini deployments',
     color: '#34a853',
     fields: [
@@ -37,7 +37,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
   },
   // ── Security & Endpoint ──────────────────────────────────────────────────────
   {
-    id: 'crowdstrike', name: 'CrowdStrike Falcon', cat: 'Endpoint', icon: '🦅',
+    id: 'crowdstrike', name: 'CrowdStrike Falcon', cat: 'Endpoint', icon: 'crowdstrike',
     desc: 'Detect AI agents running on managed endpoints via CrowdStrike RTR and XDR',
     color: '#e0161e',
     fields: [
@@ -47,7 +47,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'cortex_xdr', name: 'Palo Alto Cortex XDR', cat: 'Endpoint', icon: '🔮',
+    id: 'cortex_xdr', name: 'Palo Alto Cortex XDR', cat: 'Endpoint', icon: 'cortex_xdr',
     desc: 'Detect AI processes across endpoints monitored by Cortex XDR',
     color: '#fa582d',
     fields: [
@@ -58,7 +58,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'sentinelone', name: 'SentinelOne', cat: 'Endpoint', icon: '🛡️',
+    id: 'sentinelone', name: 'SentinelOne', cat: 'Endpoint', icon: 'sentinelone',
     desc: 'Scan managed endpoints for AI processes via SentinelOne Deep Visibility',
     color: '#6f2de4',
     fields: [
@@ -67,7 +67,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'intune', name: 'Microsoft Intune', cat: 'Endpoint', icon: '💻',
+    id: 'intune', name: 'Microsoft Intune', cat: 'Endpoint', icon: 'intune',
     desc: 'Detect AI apps installed on Intune-managed devices via Microsoft Graph',
     color: '#0078d4',
     fields: [
@@ -76,9 +76,18 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
       { key: 'clientSecret', label: 'Client Secret',  type: 'password', placeholder: 'Enter client secret value',           required: true },
     ],
   },
+  {
+    id: 'netskope', name: 'Netskope', cat: 'Endpoint', icon: 'netskope',
+    desc: 'Discover AI apps, shadow AI web traffic, and client inventory via Netskope Security Cloud',
+    color: '#0088cc',
+    fields: [
+      { key: 'tenant',   label: 'Tenant Name or FQDN',       type: 'text',     placeholder: 'acme or acme.goskope.com', required: true },
+      { key: 'apiToken', label: 'REST API v1 / v2 Token',    type: 'password', placeholder: 'Enter Netskope API token', required: true },
+    ],
+  },
   // ── SIEM ─────────────────────────────────────────────────────────────────────
   {
-    id: 'splunk', name: 'Splunk', cat: 'SIEM', icon: '📊',
+    id: 'splunk', name: 'Splunk', cat: 'SIEM', icon: 'splunk',
     desc: 'Send AI agent alerts to Splunk via HTTP Event Collector (HEC)',
     color: '#65a637',
     fields: [
@@ -88,7 +97,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'sentinel', name: 'Microsoft Sentinel', cat: 'SIEM', icon: '🔍',
+    id: 'sentinel', name: 'Microsoft Sentinel', cat: 'SIEM', icon: 'sentinel',
     desc: 'Stream AI agent risk events to Microsoft Sentinel via DCR / Log Analytics',
     color: '#0078d4',
     fields: [
@@ -99,7 +108,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
   },
   // ── Identity ─────────────────────────────────────────────────────────────────
   {
-    id: 'okta', name: 'Okta', cat: 'Identity', icon: '🔵',
+    id: 'okta', name: 'Okta', cat: 'Identity', icon: 'okta',
     desc: 'Correlate AI agent access patterns with Okta identity and SSO logs',
     color: '#007dc1',
     fields: [
@@ -108,7 +117,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'entra', name: 'Microsoft Entra ID', cat: 'Identity', icon: '🆔',
+    id: 'entra', name: 'Microsoft Entra ID', cat: 'Identity', icon: 'entra',
     desc: 'Correlate AI agent activities with Entra ID sign-in logs and service principals',
     color: '#0078d4',
     fields: [
@@ -119,7 +128,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
   },
   // ── Healthcare ────────────────────────────────────────────────────────────────
   {
-    id: 'epic', name: 'Epic EHR', cat: 'Healthcare', icon: '🏥',
+    id: 'epic', name: 'Epic EHR', cat: 'Healthcare', icon: 'epic',
     desc: 'Scan FHIR API traffic from Epic for unauthorized AI data access',
     color: '#e31b23',
     fields: [
@@ -129,7 +138,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'cerner', name: 'Oracle Cerner', cat: 'Healthcare', icon: '🩺',
+    id: 'cerner', name: 'Oracle Cerner', cat: 'Healthcare', icon: 'cerner',
     desc: 'Monitor FHIR API access and AI data flows in Cerner Millennium',
     color: '#e63012',
     fields: [
@@ -140,7 +149,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
   },
   // ── Developer Tools ───────────────────────────────────────────────────────────
   {
-    id: 'github', name: 'GitHub', cat: 'VCS / Dev Tools', icon: '🐙',
+    id: 'github', name: 'GitHub', cat: 'VCS / Dev Tools', icon: 'github',
     desc: 'Scan GitHub repos and Actions for AI agents, secret leaks, and LLM dependencies',
     color: '#24292e',
     fields: [
@@ -150,7 +159,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'gitlab', name: 'GitLab', cat: 'VCS / Dev Tools', icon: '🦊',
+    id: 'gitlab', name: 'GitLab', cat: 'VCS / Dev Tools', icon: 'gitlab',
     desc: 'Scan GitLab projects and CI/CD pipelines for AI agents and dependencies',
     color: '#e24329',
     fields: [
@@ -160,7 +169,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'jira', name: 'Jira', cat: 'VCS / Dev Tools', icon: '🔧',
+    id: 'jira', name: 'Jira', cat: 'VCS / Dev Tools', icon: 'jira',
     desc: 'Create Jira tickets automatically for agent violations and policy breaches',
     color: '#0052cc',
     fields: [
@@ -170,9 +179,53 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
       { key: 'project',  label: 'Project Key',    type: 'text',     placeholder: 'SEC',                          required: false },
     ],
   },
+  {
+    id: 'jenkins', name: 'Jenkins CI/CD', cat: 'VCS / Dev Tools', icon: 'jenkins',
+    desc: 'Scan Jenkins build jobs, pipelines, and workspace configs for AI frameworks and credentials',
+    color: '#d33833',
+    fields: [
+      { key: 'baseUrl',  label: 'Jenkins Server URL',      type: 'text',     placeholder: 'https://jenkins.company.com:8080', required: true },
+      { key: 'username', label: 'API Username (optional)', type: 'text',     placeholder: 'admin or svc_agentradar',          required: false },
+      { key: 'apiToken', label: 'API Token / Password',    type: 'password', placeholder: 'Enter Jenkins user API token',     required: true },
+    ],
+  },
+  // ── SaaS & AI Platforms ───────────────────────────────────────────────────────
+  {
+    id: 'salesforce', name: 'Salesforce Agentforce', cat: 'SaaS Platform', icon: 'salesforce',
+    desc: 'Discover Salesforce Agentforce autonomous agents, custom bots, and Einstein AI platform capabilities',
+    color: '#00a1e0',
+    fields: [
+      { key: 'loginUrl',     label: 'Login / My Domain URL',                  type: 'text',     placeholder: 'https://login.salesforce.com or https://yourorg.my.salesforce.com', required: false },
+      { key: 'clientId',     label: 'Connected App Consumer Key (Client ID)', type: 'text',     placeholder: '3MVG9...', required: true },
+      { key: 'clientSecret', label: 'Connected App Consumer Secret',          type: 'password', placeholder: 'Enter Consumer Secret', required: true },
+      { key: 'username',     label: 'Integration User Email (optional)',      type: 'text',     placeholder: 'agentradar.svc@company.com', required: false },
+    ],
+  },
+  {
+    id: 'claude', name: 'Anthropic Claude', cat: 'AI Platform', icon: 'claude',
+    desc: 'Monitor Anthropic Claude workspace deployments, API keys, and model usage',
+    color: '#cc785c',
+    fields: [
+      { key: 'apiKey',      label: 'Anthropic Admin / API Key',    type: 'password', placeholder: 'sk-ant-api03-...', required: true },
+      { key: 'apiBase',     label: 'API Base URL (optional)',      type: 'text',     placeholder: 'https://api.anthropic.com', required: false },
+      { key: 'workspaceId', label: 'Workspace / Org ID (optional)',type: 'text',     placeholder: 'org_xxxxxxxxxxxxxxxx', required: false },
+    ],
+  },
+  {
+    id: 'sap', name: 'SAP AI Core & BTP', cat: 'SaaS Platform', icon: 'sap',
+    desc: 'Scan SAP AI Core and Business Technology Platform for deployed AI models, scenarios, and generative AI hub',
+    color: '#008fd3',
+    fields: [
+      { key: 'serviceUrl',    label: 'SAP AI Core Base URL',        type: 'text',     placeholder: 'https://api.ai.prod.eu-central-1.aws.ml.hana.ondemand.com', required: true },
+      { key: 'clientId',      label: 'OAuth Client ID',             type: 'text',     placeholder: 'sb-clone-... from service key', required: true },
+      { key: 'clientSecret',  label: 'OAuth Client Secret',         type: 'password', placeholder: 'Enter client secret from service key', required: true },
+      { key: 'authUrl',       label: 'UAA Token Authentication URL',type: 'text',     placeholder: 'https://subaccount.authentication.eu10.hana.ondemand.com/oauth/token', required: true },
+      { key: 'resourceGroup', label: 'Resource Group (optional)',   type: 'text',     placeholder: 'default', required: false },
+    ],
+  },
   // ── Network ───────────────────────────────────────────────────────────────────
   {
-    id: 'zscaler', name: 'Zscaler', cat: 'Network / Proxy', icon: '🔒',
+    id: 'zscaler', name: 'Zscaler', cat: 'Network / Proxy', icon: 'zscaler',
     desc: 'Ingest Zscaler proxy logs to detect AI service usage across your network',
     color: '#005EB8',
     fields: [
@@ -181,7 +234,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'palo_alto', name: 'Palo Alto Firewall', cat: 'Network / Proxy', icon: '🧱',
+    id: 'palo_alto', name: 'Palo Alto Firewall', cat: 'Network / Proxy', icon: 'palo_alto',
     desc: 'Monitor AI API traffic via Palo Alto Next-Gen Firewall logs and App-ID',
     color: '#fa582d',
     fields: [
@@ -192,7 +245,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
   },
   // ── Communication ─────────────────────────────────────────────────────────────
   {
-    id: 'slack', name: 'Slack', cat: 'Communication', icon: '💬',
+    id: 'slack', name: 'Slack', cat: 'Communication', icon: 'slack',
     desc: 'Send real-time AI agent alerts and policy violation notifications to Slack',
     color: '#4a154b',
     fields: [
@@ -201,7 +254,7 @@ export const INTEGRATION_PROVIDERS: ProviderCatalogItem[] = [
     ],
   },
   {
-    id: 'teams', name: 'Microsoft Teams', cat: 'Communication', icon: '📣',
+    id: 'teams', name: 'Microsoft Teams', cat: 'Communication', icon: 'teams',
     desc: 'Post AI risk alerts and governance summaries to Microsoft Teams channels',
     color: '#6264a7',
     fields: [

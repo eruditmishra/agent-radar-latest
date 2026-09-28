@@ -15,7 +15,7 @@
       must be configured as a response header at the static hosting/CDN layer
       that serves this file over HTTPS.
     -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self' ws: wss:; base-uri 'self'; object-src 'none'">
     <!-- Modern Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,21 +24,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   </head>
   <body>
-    <!--
-      Fix: Potential Clickjacking on Legacy Browsers. Modern browsers are
-      protected by the frame-ancestors CSP directive above (and helmet's
-      X-Frame-Options on API-served responses), but legacy browsers that don't
-      honor CSP need an explicit framebusting script. UI is hidden until we
-      confirm this page is not rendered inside another frame.
-    -->
-    <style>html { display: none; }</style>
-    <script>
-      if (self === top) {
-        document.documentElement.style.display = 'block';
-      } else {
-        top.location = self.location;
-      }
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

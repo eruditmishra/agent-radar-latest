@@ -34,6 +34,7 @@ export default function SSOConfig() {
   const [isActive, setIsActive] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState(SSO_PROVIDERS[0]);
   const [config, setConfig] = useState<any>({});
+  const [hasStoredSecret, setHasStoredSecret] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -47,7 +48,11 @@ export default function SSOConfig() {
         setIsActive(sso.is_active);
         const prov = SSO_PROVIDERS.find(p => p.id === sso.provider_id) || SSO_PROVIDERS[0];
         setSelectedProvider(prov);
+        // clientSecret is never returned by the API (write-only) — the
+        // server tells us whether one is already stored so we can show a
+        // placeholder instead of a blank field.
         setConfig(sso.config || {});
+        setHasStoredSecret(!!sso.hasClientSecret);
       }
     } catch (err) {
       console.error("Failed to load SSO settings", err);
@@ -201,10 +206,13 @@ export default function SSOConfig() {
                   <input
                     type="password"
                     className="w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-sm outline-none focus:border-indigo-500"
-                    placeholder="Enter Client Secret"
+                    placeholder={hasStoredSecret ? 'Stored — leave blank to keep current secret' : 'Enter Client Secret'}
                     value={config.clientSecret || ''}
                     onChange={(e) => handleConfigChange('clientSecret', e.target.value)}
                   />
+                  {hasStoredSecret && (
+                    <p className="text-xs text-slate-500 mt-1">A client secret is already stored. Only fill this in to replace it.</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Additional OAuth Scopes</label>

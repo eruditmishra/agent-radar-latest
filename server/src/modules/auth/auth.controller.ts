@@ -149,6 +149,9 @@ export const refreshHandler = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true });
   } catch (err: any) {
     clearAuthCookies(res);
+    if (err.message === "SESSION_IDLE_TIMEOUT") {
+      throw new UnauthorizedError("Session expired due to inactivity");
+    }
     throw new UnauthorizedError(err.message ?? "REFRESH_FAILED");
   }
 });
@@ -355,7 +358,12 @@ export const getSSOConfigPublicHandler = asyncHandler(async (req, res) => {
 
 export const getSSOSettingsHandler = asyncHandler(async (req, res) => {
   const configObj = await ssoRepo.getSSOConfig(config.tenantId);
-  res.status(200).json({ success: true, sso: configObj });
+  res.status(200).json({
+    success: true,
+    sso: configObj
+      ? { ...configObj, config: redactSsoConfig(configObj.config), hasClientSecret: !!configObj.config?.clientSecret }
+      : null,
+  });
 });
 
 function redactSsoConfig(raw: any): Record<string, unknown> {
@@ -374,7 +382,13 @@ export const updateSSOSettingsHandler = asyncHandler(async (req, res) => {
     throw new BadRequestError(`Invalid SSO configuration: ${mappingErrors.join("; ")}`);
   }
   const existing = await ssoRepo.getSSOConfig(config.tenantId);
-  const updated = await ssoRepo.upsertSSOConfig(config.tenantId, providerId, providerType, ssoConfig || {}, isActive);
+  // clientSecret is write-only to the client (see getSSOSettingsHandler) — if
+  // the frontend didn't send a new value, keep whatever is already stored.
+  const nextSsoConfig = { ...(ssoConfig || {}) };
+  if (!nextSsoConfig.clientSecret && existing?.config?.clientSecret) {
+    nextSsoConfig.clientSecret = existing.config.clientSecret;
+  }
+  const updated = await ssoRepo.upsertSSOConfig(config.tenantId, providerId, providerType, nextSsoConfig, isActive);
 
   const actor = (req as any).user;
   audit.log({
@@ -403,7 +417,10 @@ export const updateSSOSettingsHandler = asyncHandler(async (req, res) => {
     },
   });
 
-  res.status(200).json({ success: true, sso: updated });
+  res.status(200).json({
+    success: true,
+    sso: { ...updated, config: redactSsoConfig(updated.config), hasClientSecret: !!updated.config?.clientSecret },
+  });
 });
 
 export const ssoLoginHandler = asyncHandler(async (req, res) => {

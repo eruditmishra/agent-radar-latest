@@ -1,4 +1,29 @@
-export type IntegrationProvider = "aws" | "azure" | "gcp" | "github" | "gitlab" | "crowdstrike" | "cortex_xdr" | "sentinelone" | "intune" | "splunk" | "sentinel" | "okta" | "entra" | "epic" | "cerner" | "jira" | "zscaler" | "palo_alto" | "slack" | "teams";
+export type IntegrationProvider =
+  | "aws"
+  | "azure"
+  | "gcp"
+  | "github"
+  | "gitlab"
+  | "jenkins"
+  | "crowdstrike"
+  | "cortex_xdr"
+  | "sentinelone"
+  | "intune"
+  | "netskope"
+  | "salesforce"
+  | "claude"
+  | "sap"
+  | "splunk"
+  | "sentinel"
+  | "okta"
+  | "entra"
+  | "epic"
+  | "cerner"
+  | "jira"
+  | "zscaler"
+  | "palo_alto"
+  | "slack"
+  | "teams";
 export type IntegrationStatus = "active" | "inactive" | "error";
 
 export interface IntegrationConnectionView {

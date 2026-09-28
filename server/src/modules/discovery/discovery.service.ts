@@ -56,6 +56,26 @@ async function loadScanner(provider: ScanProvider) {
       case "github":
       case "gitlab":
         return await import("./scanners/git/git.scanner");
+      case "jenkins":
+      case "github_actions":
+      case "gitlab_ci":
+        return await import("./scanners/ci/ci.scanner");
+      case "crowdstrike":
+      case "defender":
+      case "intune":
+      case "cortex":
+      case "cortex_xdr":
+      case "netskope":
+        return await import("./scanners/edr/edr.scanner");
+      case "kubernetes":
+      case "k8s":
+        return await import("./scanners/k8s/k8s.scanner");
+      case "m365_copilot":
+      case "salesforce":
+      case "workday":
+      case "servicenow":
+      case "openai":
+        return await import("./scanners/saas/saas.scanner");
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
@@ -490,6 +510,51 @@ async function runConnectorScan(
         provider: connector.provider,
       });
       observations = (result?.observations ?? []) as ScannerRawObservation[];
+    } else if (
+      connector.provider === "jenkins" ||
+      connector.provider === "github_actions" ||
+      connector.provider === "gitlab_ci"
+    ) {
+      const result = await (scanner as any).discoverCiConnector?.({
+        ...conn,
+        provider: connector.provider,
+      });
+      observations = (result?.observations ?? []) as ScannerRawObservation[];
+    } else if (
+      connector.provider === "crowdstrike" ||
+      connector.provider === "defender" ||
+      connector.provider === "intune" ||
+      connector.provider === "cortex" ||
+      connector.provider === "cortex_xdr" ||
+      connector.provider === "netskope"
+    ) {
+      const providerKey =
+        connector.provider === "cortex_xdr" ? "cortex" : connector.provider;
+      const result = await (scanner as any).discoverEdrConnector?.({
+        ...conn,
+        provider: providerKey,
+      });
+      observations = (result?.observations ?? []) as ScannerRawObservation[];
+      discoveryErrors = result?.discoveryErrors ?? [];
+    } else if (
+      connector.provider === "kubernetes" ||
+      connector.provider === "k8s"
+    ) {
+      const result = await (scanner as any).discoverK8sConnector?.(conn);
+      observations = (result?.observations ?? []) as ScannerRawObservation[];
+    } else if (
+      connector.provider === "m365_copilot" ||
+      connector.provider === "salesforce" ||
+      connector.provider === "workday" ||
+      connector.provider === "servicenow" ||
+      connector.provider === "openai"
+    ) {
+      const result = await (scanner as any).discoverSaasConnector?.({
+        ...conn,
+        provider: connector.provider,
+      });
+      observations = (result?.observations ?? []) as ScannerRawObservation[];
+      discoveryErrors = result?.discoveryErrors ?? [];
     }
 
     // Upsert each valid observation
