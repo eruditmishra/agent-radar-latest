@@ -46,3 +46,5 @@ Thumbs.db
 
 # Legacy Frontend
 apps/
+
+*.xlsx

@@ -104,3 +104,34 @@ describe("extractModelRefs", () => {
     ]);
   });
 });
+
+describe("calculateAgentRiskScore", () => {
+  it("calculates risk score and level correctly for an agent with assessment", async () => {
+    const { calculateAgentRiskScore } = await import("../security/riskScore");
+    const agent = agentFixture({
+      status: "shadow",
+      internet_access: true,
+    });
+    const assessment = {
+      domains: {
+        data_access: { has_pii: true },
+      },
+      evidence_completeness: { overall: 0.8 },
+      frameworks: {
+        owasp_ai_agents_2026: {
+          controls: {
+            ASI01: { status: "detected", name: "Prompt Injection" },
+          },
+        },
+      },
+    };
+
+    const breakdown = calculateAgentRiskScore(agent, assessment);
+    expect(breakdown).toBeDefined();
+    expect(breakdown.finalScore).toBeGreaterThan(0);
+    expect(["Low", "Medium", "High", "Critical"]).toContain(breakdown.riskLevel);
+    expect(breakdown.components.intrinsicAttackSurface.score).toBeGreaterThan(0);
+    expect(breakdown.components.governanceDeficits.score).toBeGreaterThan(0);
+    expect(breakdown.components.owaspVulnerabilities.score).toBeGreaterThan(0);
+  });
+});

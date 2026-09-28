@@ -43,7 +43,9 @@ export default function AgentDetails() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "owasp" | "risk">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "owasp" | "risk">(
+    "overview",
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -198,11 +200,17 @@ export default function AgentDetails() {
         return { label: "Unrated", className: "bg-slate-200 text-slate-600" };
     }
   };
-  const violationSeverityRank: Record<string, number> = { Critical: 3, Risk: 2, Info: 1, Unrated: 0 };
+  const violationSeverityRank: Record<string, number> = {
+    Critical: 3,
+    Risk: 2,
+    Info: 1,
+    Unrated: 0,
+  };
   const highestViolationSeverity = violations.reduce(
     (highest, v) => {
       const sev = getViolationSeverity(v.findingType);
-      return violationSeverityRank[sev.label] > violationSeverityRank[highest.label]
+      return violationSeverityRank[sev.label] >
+        violationSeverityRank[highest.label]
         ? sev
         : highest;
     },
@@ -211,7 +219,10 @@ export default function AgentDetails() {
 
   if (!agent.owner)
     gaps.push({ label: "Owner & Department", value: "null (Unassigned)" });
-  if (!agent.data_access_classification || Object.keys(agent.data_access_classification).length === 0)
+  if (
+    !agent.data_access_classification ||
+    Object.keys(agent.data_access_classification).length === 0
+  )
     gaps.push({ label: "Data Access Classification", value: "null (Unrated)" });
   if (!agent.repository)
     gaps.push({ label: "Source Code Repository", value: "null (Untracked)" });
@@ -247,14 +258,22 @@ export default function AgentDetails() {
 
   const isConditionallyApproved = agent.status === "conditionally_approved";
   const isConditionallyShadow = agent.status === "conditionally_shadow";
-  const showGovernanceJourney = isConditionallyApproved || isConditionallyShadow;
+  const showGovernanceJourney =
+    isConditionallyApproved || isConditionallyShadow;
 
   // Find the latest logs for the journey
-  const sortedLogs = [...logs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  const latestRequestLog = sortedLogs.find(l => l.event_type === "agent.approval_requested");
-  const latestDecisionLog = sortedLogs.find(l => 
-    (l.event_type === "agent.approved" || l.event_type === "agent.flagged") && 
-    (l.after?.governance_status === "conditionally_approved" || l.after?.governance_status === "conditionally_shadow")
+  const sortedLogs = [...logs].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+  const latestRequestLog = sortedLogs.find(
+    (l) => l.event_type === "agent.approval_requested",
+  );
+  const latestDecisionLog = sortedLogs.find(
+    (l) =>
+      (l.event_type === "agent.approved" || l.event_type === "agent.flagged") &&
+      (l.after?.governance_status === "conditionally_approved" ||
+        l.after?.governance_status === "conditionally_shadow"),
   );
 
   return (
@@ -338,9 +357,7 @@ export default function AgentDetails() {
                     className={`${(agent.provider || agent.cloud_provider || "").toLowerCase().includes("azure") ? "text-[#0078D4]" : (agent.provider || agent.cloud_provider || "").toLowerCase().includes("gcp") ? "text-[#EA4335]" : "text-[#FF9900]"} flex items-center gap-1.5 whitespace-nowrap`}
                   >
                     <Server size={14} />{" "}
-                    {agent.provider ||
-                      agent.cloud_provider ||
-                      "Unknown Agent"}
+                    {agent.provider || agent.cloud_provider || "Unknown Agent"}
                   </div>
                   <div className="hidden sm:block text-slate-300">•</div>
                   <div className="flex items-center gap-1.5 whitespace-nowrap">
@@ -396,13 +413,21 @@ export default function AgentDetails() {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">
                   Risk Score
                 </span>
-                <span className={`text-lg font-bold ${
-                  (agent as any).riskScoreBreakdown?.riskLevel === 'Critical' ? 'text-red-600' :
-                  (agent as any).riskScoreBreakdown?.riskLevel === 'High' ? 'text-orange-600' :
-                  (agent as any).riskScoreBreakdown?.riskLevel === 'Medium' ? 'text-amber-500' :
-                  'text-emerald-500'
-                }`}>
-                  {(agent as any).riskScoreBreakdown ? `${(agent as any).riskScoreBreakdown.finalScore}/100` : "N/A"}
+                <span
+                  className={`text-lg font-bold ${
+                    (agent as any).riskScoreBreakdown?.riskLevel === "Critical"
+                      ? "text-red-600"
+                      : (agent as any).riskScoreBreakdown?.riskLevel === "High"
+                        ? "text-orange-600"
+                        : (agent as any).riskScoreBreakdown?.riskLevel ===
+                            "Medium"
+                          ? "text-amber-500"
+                          : "text-emerald-500"
+                  }`}
+                >
+                  {(agent as any).riskScoreBreakdown
+                    ? `${(agent as any).riskScoreBreakdown.finalScore}`
+                    : "N/A"}
                   <span className="text-xs ml-1">
                     {(agent as any).riskScoreBreakdown?.riskLevel || ""}
                   </span>
@@ -465,14 +490,20 @@ export default function AgentDetails() {
             onClick={() => setActiveTab("owasp")}
             className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "owasp" ? "border-blue text-blue" : "border-transparent text-slate-500 hover:text-slate-800"}`}
           >
-            <Shield size={16} className={activeTab === "owasp" ? "text-blue" : "text-slate-400"} />
+            <Shield
+              size={16}
+              className={activeTab === "owasp" ? "text-blue" : "text-slate-400"}
+            />
             Assessments
           </button>
           <button
             onClick={() => setActiveTab("risk")}
             className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "risk" ? "border-blue text-blue" : "border-transparent text-slate-500 hover:text-slate-800"}`}
           >
-            <Activity size={16} className={activeTab === "risk" ? "text-blue" : "text-slate-400"} />
+            <Activity
+              size={16}
+              className={activeTab === "risk" ? "text-blue" : "text-slate-400"}
+            />
             Risk Breakdown
           </button>
         </div>
@@ -488,631 +519,675 @@ export default function AgentDetails() {
         ) : (
           <>
             {/* GOVERNANCE JOURNEY (Conditionally Approved/Shadow) */}
-        {showGovernanceJourney && (
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Shield size={18} className={isConditionallyApproved ? "text-green" : "text-amber"} /> 
-              Governance & Approval Journey
-            </h3>
-            
-            <div className="flex flex-col md:flex-row gap-6 relative">
-              {/* Connector line for desktop */}
-              <div className="hidden md:block absolute left-1/2 top-8 bottom-8 w-px bg-slate-200 -translate-x-1/2" />
-              
-              {/* Request Phase */}
-              <div className="flex-1 relative">
-                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 h-full">
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                      <Clock size={14} /> Request Raised
-                    </span>
-                    {latestRequestLog && (
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(latestRequestLog.created_at).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {latestRequestLog ? (
-                    <>
-                      <div className="text-sm font-medium text-slate-800 mb-1">
-                        By: <span className="font-semibold text-blue">{latestRequestLog.user_email || "Unknown Analyst"}</span>
-                      </div>
-                      <div className="text-xs text-slate-600 mb-3">
-                        Requested Status: <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">{latestRequestLog.after?.requested_status}</span>
-                      </div>
-                      {latestRequestLog.after?.request_remark ? (
-                        <div className="bg-white border border-slate-200 rounded p-3 text-xs text-slate-600 italic relative">
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue/40 rounded-l" />
-                          "{latestRequestLog.after.request_remark}"
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">No remark provided.</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">Request log not available.</span>
-                  )}
-                </div>
-              </div>
-              
-              {/* Decision Phase */}
-              <div className="flex-1 relative">
-                <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 h-full">
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
-                      <CheckCircle2 size={14} className={isConditionallyApproved ? "text-green" : "text-amber"} /> Decision Granted
-                    </span>
-                    {latestDecisionLog && (
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(latestDecisionLog.created_at).toLocaleString()}
-                      </span>
-                    )}
-                  </div>
-                  
-                  {latestDecisionLog ? (
-                    <>
-                      <div className="text-sm font-medium text-slate-800 mb-1">
-                        By: <span className="font-semibold text-blue">{latestDecisionLog.user_email || "System/Admin"}</span>
-                      </div>
-                      <div className="text-xs text-slate-600 mb-3">
-                        Final Status: <span className={`font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 ${isConditionallyApproved ? 'text-green' : 'text-amber'}`}>{latestDecisionLog.after?.governance_status}</span>
-                      </div>
-                      {agent.approval_remark ? (
-                        <div className="bg-white border border-slate-200 rounded p-3 text-xs text-slate-600 italic relative">
-                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${isConditionallyApproved ? 'bg-green/40' : 'bg-amber/40'} rounded-l`} />
-                          "{agent.approval_remark}"
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400 italic">No remark provided.</span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-xs text-slate-400 italic">Decision log not available.</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TOP CARDS (3 Columns) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Passed */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-green" /> What is there
-                (Passed)
-              </h3>
-              <span className="text-[10px] font-bold bg-green/10 text-green px-2 py-0.5 rounded border border-green/20">
-                {passes.length} Enforced
-              </span>
-            </div>
-            <div className="space-y-3">
-              {passes.map((p, i) => (
-                <div
-                  key={i}
-                  className="border border-green/20 bg-green/5 rounded-lg p-3"
-                >
-                  <div className="text-xs font-bold text-slate-800 flex items-start gap-1.5 mb-1">
-                    <CheckCircle2
-                      size={14}
-                      className="text-green shrink-0 mt-0.5"
-                    />{" "}
-                    {p.label}
-                  </div>
-                  <div className="text-[11px] text-slate-500 pl-5 leading-relaxed">
-                    {p.desc}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Violations */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
-                <AlertTriangle size={16} className="text-amber" /> Violations &
-                Weaknesses
-              </h3>
-              <span className="text-[10px] font-bold bg-amber/10 text-amber px-2 py-0.5 rounded border border-amber/20">
-                {violations.length} Findings
-              </span>
-            </div>
-            <div className="space-y-3">
-              {violations.length === 0 ? (
-                <div className="text-sm text-slate-400 p-4 text-center">
-                  No violations detected.
-                </div>
-              ) : (
-                violations.map((v, i) => (
-                  <div
-                    key={i}
-                    className="border border-amber/20 bg-amber/5 rounded-lg p-3"
-                  >
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="text-xs font-bold text-slate-800 flex items-start gap-1.5">
-                        <AlertTriangle
-                          size={14}
-                          className="text-amber shrink-0 mt-0.5"
-                        />{" "}
-                        {v.label}
-                      </div>
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${getViolationSeverity(v.findingType).className}`}
-                      >
-                        {getViolationSeverity(v.findingType).label}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-600 pl-5 leading-relaxed">
-                      {v.desc}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Gaps */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
-                <HelpCircle size={16} className="text-slate-400" /> What is
-                missing (Gaps)
-              </h3>
-              <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
-                {gaps.length} Blindspots
-              </span>
-            </div>
-            <div className="space-y-2 flex-1">
-              {gaps.length === 0 ? (
-                <div className="text-sm text-slate-400 p-4 text-center">
-                  No blindspots detected.
-                </div>
-              ) : (
-                gaps.map((g, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center border border-slate-100 bg-slate-50 rounded-lg p-3"
-                  >
-                    <div className="text-[11px] font-semibold text-slate-600 flex items-center gap-2">
-                      <FileText size={12} className="text-slate-400" />{" "}
-                      {g.label}
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-mono bg-white px-2 py-1 rounded border border-slate-100">
-                      {g.value}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="mt-6 text-[10px] text-slate-400 leading-tight">
-              Orphaned agent risk: missing metadata prevents automated cost &
-              compliance chargeback.
-            </div>
-          </div>
-        </div>
-
-        {/* CHARTS (3 Columns) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Posture Breakdown
-              </h3>
-              <span className="text-[10px] font-bold text-slate-800">
-                {passes.length + violations.length + gaps.length} Total Controls
-                Evaluated
-              </span>
-            </div>
-            <div className="h-48 relative w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={donutData}
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={2}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {donutData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-10px]">
-                <span className="text-2xl font-bold text-slate-800">
-                  {Math.round(
-                    (passes.length /
-                      (passes.length + violations.length + gaps.length)) *
-                      100,
-                  )}
-                  %
-                </span>
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                  Fully Guarded
-                </span>
-              </div>
-            </div>
-            <div className="flex justify-center gap-4 text-[10px] font-bold text-slate-500">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-green"></div>{" "}
-                {passes.length} Passed
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-amber"></div>{" "}
-                {violations.length} Violations
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-slate-300"></div>{" "}
-                {gaps.length} Missing
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Access Perimeter Risk
-              </h3>
-              <span className="text-[10px] font-bold text-green">
-                {radarData.filter((d) => d.A === 1).length} Egress Exposure
-              </span>
-            </div>
-            <div className="h-48 relative w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart
-                  cx="50%"
-                  cy="50%"
-                  outerRadius="70%"
-                  data={radarData}
-                >
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis
-                    dataKey="subject"
-                    tick={{ fill: "#64748b", fontSize: 9, fontWeight: 600 }}
-                  />
-                  <PolarRadiusAxis
-                    angle={30}
-                    domain={[0, 1]}
-                    tick={false}
-                    axisLine={false}
-                  />
-                  <Radar
-                    name="Agent"
-                    dataKey="A"
-                    stroke="#f59e0b"
-                    fill="#f59e0b"
-                    fillOpacity={0.2}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="text-center text-[10px] text-slate-500 font-medium">
-              Zero uncontained lateral movement routes found across VPC/Egress.
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                Scan Authenticity
-              </h3>
-              <span className="text-[10px] font-bold text-blue">
-                {confidencePct / 100} Score
-              </span>
-            </div>
-            <div className="h-48 relative w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={gaugeData}
-                    cx="50%"
-                    cy="75%"
-                    startAngle={180}
-                    endAngle={0}
-                    innerRadius={60}
-                    outerRadius={85}
-                    paddingAngle={0}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {gaugeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 pointer-events-none">
-                <span className="text-3xl font-extrabold text-slate-800">
-                  {confidencePct}%
-                </span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Discovery Confidence
-                </span>
-              </div>
-            </div>
-            <div className="flex justify-between text-[10px] font-bold text-slate-500 px-2 mt-[-10px]">
-              <span>
-                Collector:{" "}
-                {agent.source_collectors?.length
-                  ? agent.source_collectors.join(", ")
-                  : "Unknown"}
-              </span>
-              <span>
-                Deep Scan:{" "}
-                {metadata.deep && Object.keys(metadata.deep).length > 0
-                  ? "Verified"
-                  : "Not Scanned"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* BOTTOM SECTIONS */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT 2/3 COLUMN */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Behavior & Instructions */}
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide">
-                  <Activity size={16} className="text-blue" /> Agent Behavior &
-                  Instructions
-                </h2>
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">
-                  {agent.deployment_type || "Unknown"}
-                </span>
-              </div>
-
-              <div className="mb-6">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">
-                  Purpose / Role Description
-                </span>
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-[13px] text-slate-700 font-medium">
-                  {agent.evidence_reason ||
-                  metadata.description ||
-                  metadata.deep?.description ? (
-                    agent.evidence_reason ||
-                    metadata.description ||
-                    metadata.deep?.description
-                  ) : (
-                    <span className="text-slate-400 italic">
-                      No purpose description available
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    System Instruction Preview
-                  </span>
-                  <button
-                    onClick={() =>
-                      navigator.clipboard.writeText(
-                        config.instruction ||
-                          metadata.instructionPreview ||
-                          metadata.deep?.instructionPreview ||
-                          "",
-                      )
+            {showGovernanceJourney && (
+              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <Shield
+                    size={18}
+                    className={
+                      isConditionallyApproved ? "text-green" : "text-amber"
                     }
-                    className="text-[11px] font-bold text-blue hover:text-blue-700 flex items-center gap-1 transition-colors"
-                  >
-                    <Copy size={12} /> Copy
-                  </button>
+                  />
+                  Governance & Approval Journey
+                </h3>
+
+                <div className="flex flex-col md:flex-row gap-6 relative">
+                  {/* Connector line for desktop */}
+                  <div className="hidden md:block absolute left-1/2 top-8 bottom-8 w-px bg-slate-200 -translate-x-1/2" />
+
+                  {/* Request Phase */}
+                  <div className="flex-1 relative">
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 h-full">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+                          <Clock size={14} /> Request Raised
+                        </span>
+                        {latestRequestLog && (
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(
+                              latestRequestLog.created_at,
+                            ).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {latestRequestLog ? (
+                        <>
+                          <div className="text-sm font-medium text-slate-800 mb-1">
+                            By:{" "}
+                            <span className="font-semibold text-blue">
+                              {latestRequestLog.user_email || "Unknown Analyst"}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-600 mb-3">
+                            Requested Status:{" "}
+                            <span className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                              {latestRequestLog.after?.requested_status}
+                            </span>
+                          </div>
+                          {latestRequestLog.after?.request_remark ? (
+                            <div className="bg-white border border-slate-200 rounded p-3 text-xs text-slate-600 italic relative">
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue/40 rounded-l" />
+                              "{latestRequestLog.after.request_remark}"
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              No remark provided.
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">
+                          Request log not available.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Decision Phase */}
+                  <div className="flex-1 relative">
+                    <div className="bg-slate-50 border border-slate-100 rounded-lg p-4 h-full">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1.5">
+                          <CheckCircle2
+                            size={14}
+                            className={
+                              isConditionallyApproved
+                                ? "text-green"
+                                : "text-amber"
+                            }
+                          />{" "}
+                          Decision Granted
+                        </span>
+                        {latestDecisionLog && (
+                          <span className="text-[10px] text-slate-400">
+                            {new Date(
+                              latestDecisionLog.created_at,
+                            ).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+
+                      {latestDecisionLog ? (
+                        <>
+                          <div className="text-sm font-medium text-slate-800 mb-1">
+                            By:{" "}
+                            <span className="font-semibold text-blue">
+                              {latestDecisionLog.user_email || "System/Admin"}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-600 mb-3">
+                            Final Status:{" "}
+                            <span
+                              className={`font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 ${isConditionallyApproved ? "text-green" : "text-amber"}`}
+                            >
+                              {latestDecisionLog.after?.governance_status}
+                            </span>
+                          </div>
+                          {agent.approval_remark ? (
+                            <div className="bg-white border border-slate-200 rounded p-3 text-xs text-slate-600 italic relative">
+                              <div
+                                className={`absolute left-0 top-0 bottom-0 w-1 ${isConditionallyApproved ? "bg-green/40" : "bg-amber/40"} rounded-l`}
+                              />
+                              "{agent.approval_remark}"
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              No remark provided.
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">
+                          Decision log not available.
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 font-mono text-[12px] text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap shadow-inner">
-                  {config.instruction ||
-                  metadata.instructionPreview ||
-                  metadata.deep?.instructionPreview ? (
-                    config.instruction ||
-                    metadata.instructionPreview ||
-                    metadata.deep?.instructionPreview
+              </div>
+            )}
+
+            {/* TOP CARDS (3 Columns) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Passed */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-green" /> What is
+                    there (Passed)
+                  </h3>
+                  <span className="text-[10px] font-bold bg-green/10 text-green px-2 py-0.5 rounded border border-green/20">
+                    {passes.length} Enforced
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {passes.map((p, i) => (
+                    <div
+                      key={i}
+                      className="border border-green/20 bg-green/5 rounded-lg p-3"
+                    >
+                      <div className="text-xs font-bold text-slate-800 flex items-start gap-1.5 mb-1">
+                        <CheckCircle2
+                          size={14}
+                          className="text-green shrink-0 mt-0.5"
+                        />{" "}
+                        {p.label}
+                      </div>
+                      <div className="text-[11px] text-slate-500 pl-5 leading-relaxed">
+                        {p.desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Violations */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-amber" />{" "}
+                    Violations & Weaknesses
+                  </h3>
+                  <span className="text-[10px] font-bold bg-amber/10 text-amber px-2 py-0.5 rounded border border-amber/20">
+                    {violations.length} Findings
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {violations.length === 0 ? (
+                    <div className="text-sm text-slate-400 p-4 text-center">
+                      No violations detected.
+                    </div>
                   ) : (
-                    <span className="text-slate-500 italic">
-                      No system instructions detected
-                    </span>
+                    violations.map((v, i) => (
+                      <div
+                        key={i}
+                        className="border border-amber/20 bg-amber/5 rounded-lg p-3"
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="text-xs font-bold text-slate-800 flex items-start gap-1.5">
+                            <AlertTriangle
+                              size={14}
+                              className="text-amber shrink-0 mt-0.5"
+                            />{" "}
+                            {v.label}
+                          </div>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${getViolationSeverity(v.findingType).className}`}
+                          >
+                            {getViolationSeverity(v.findingType).label}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-600 pl-5 leading-relaxed">
+                          {v.desc}
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Cloud Architecture */}
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-              <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide mb-6">
-                <Cpu size={16} className="text-purple" /> Cloud Architecture &
-                Identification
-              </h2>
-
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-slate-200 bg-slate-50 rounded-lg p-3">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-0">
-                    Agent Endpoint ARN
-                  </span>
-                  <span className="text-[12px] font-mono font-bold text-blue break-all sm:text-right">
-                    {metadata.deep?.agentArn || agent.fingerprint}
+              {/* Gaps */}
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase flex items-center gap-2">
+                    <HelpCircle size={16} className="text-slate-400" /> What is
+                    missing (Gaps)
+                  </h3>
+                  <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200">
+                    {gaps.length} Blindspots
                   </span>
                 </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-slate-200 bg-slate-50 rounded-lg p-3">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-0">
-                    IAM Resource Role
-                  </span>
-                  <span className="text-[12px] font-mono font-bold text-blue break-all sm:text-right">
-                    {metadata.deep?.agentResourceRoleArn || "N/A"}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="border border-slate-200 bg-slate-50 rounded-lg p-4">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Foundation Model ID
-                    </span>
-                    <span className="text-[13px] font-mono font-bold text-slate-800">
-                      {agent.model || metadata.deep?.foundationModel || "Unknown"}
-                    </span>
-                  </div>
-                  <div className="border border-slate-200 bg-slate-50 rounded-lg p-4">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Encryption Standard
-                    </span>
-                    <span className="text-[13px] font-bold text-slate-600">
-                      {metadata.deep?.customerEncryptionKeyArn
-                        ? "Customer Managed Key"
-                        : "Platform Managed Key (Default)"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT 1/3 COLUMN */}
-          <div className="space-y-6">
-            {/* Data Classification & Privacy Risk */}
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-              <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide mb-4">
-                <Lock size={16} className="text-amber" /> Privacy Risk
-              </h2>
-
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  {
-                    label: "PHI Access",
-                    value: agent.data_access_classification?.phi_access,
-                  },
-                  {
-                    label: "PII Access",
-                    value: agent.data_access_classification?.pii_access,
-                  },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className={`border rounded-lg p-3 flex justify-between items-center ${item.value ? "bg-amber/5 border-amber/20" : "bg-green/5 border-green/20"}`}
-                  >
-                    <span className="text-[12px] font-bold text-slate-700">
-                      {item.label}
-                    </span>
-                    <div
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase flex items-center gap-1 ${item.value ? "bg-amber/10 text-amber" : "bg-green/10 text-green"}`}
-                    >
-                      {item.value ? (
-                        <AlertTriangle size={12} />
-                      ) : (
-                        <CheckCircle2 size={12} />
-                      )}
-                      {item.value ? "Configured" : "Unconfigured"}
+                <div className="space-y-2 flex-1">
+                  {gaps.length === 0 ? (
+                    <div className="text-sm text-slate-400 p-4 text-center">
+                      No blindspots detected.
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Timeline */}
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 relative">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide">
-                  <Clock size={16} className="text-blue" /> Lifecycle & Audit
-                  Log
-                </h2>
-              </div>
-
-              <div className="relative border-l-2 border-slate-100 ml-2 space-y-8 pb-4 max-h-96 overflow-y-auto pr-4">
-                {logs.length > 0 ? (
-                  logs.map((log) => {
-                    const isSystem = log.log_type === "access";
-                    const isShadow =
-                      log.event_type === "agent.status_changed" &&
-                      log.summary.toLowerCase().includes("shadow");
-                    const isApproved =
-                      log.event_type === "agent.status_changed" &&
-                      log.summary.toLowerCase().includes("approved");
-                    const isImportantStatusChange = isShadow || isApproved;
-
-                    const bgClass = isShadow
-                      ? "bg-amber/10 border border-amber/20 rounded-lg p-3"
-                      : isApproved
-                        ? "bg-green/10 border border-green/20 rounded-lg p-3"
-                        : "";
-                    const dotClass = isShadow
-                      ? "bg-amber"
-                      : isApproved
-                        ? "bg-green"
-                        : isSystem
-                          ? "bg-slate-300"
-                          : "bg-green";
-                    const titleClass = isShadow
-                      ? "text-amber-800"
-                      : isApproved
-                        ? "text-green-800"
-                        : "text-slate-800";
-                    const tagClass = isShadow
-                      ? "bg-amber/20 text-amber-800"
-                      : isApproved
-                        ? "bg-green/20 text-green-800"
-                        : "";
-                    const descClass = isShadow
-                      ? "text-amber-700 font-medium"
-                      : isApproved
-                        ? "text-green-700 font-medium"
-                        : "text-slate-500";
-
-                    return (
-                      <div key={log.id} className="relative pl-6 pb-2">
-                        <div
-                          className={`absolute -left-[5px] ${isImportantStatusChange ? "top-4" : "top-1"} w-2 h-2 rounded-full ring-4 ring-white ${dotClass}`}
-                        ></div>
-                        <div className={bgClass}>
-                          <div className="flex justify-between items-start mb-1">
-                            <span
-                              className={`text-[12px] font-bold ${titleClass}`}
-                            >
-                              {log.event_type}
-                              {isImportantStatusChange && (
-                                <span
-                                  className={`ml-2 text-[9px] px-1.5 py-0.5 rounded uppercase ${tagClass}`}
-                                >
-                                  Status Update
-                                </span>
-                              )}
-                            </span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">
-                              {new Date(log.created_at).toLocaleString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
-                            </span>
-                          </div>
-                          <div
-                            className={`text-[11px] leading-relaxed ${descClass}`}
-                          >
-                            {log.summary}
-                          </div>
+                  ) : (
+                    gaps.map((g, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between items-center border border-slate-100 bg-slate-50 rounded-lg p-3"
+                      >
+                        <div className="text-[11px] font-semibold text-slate-600 flex items-center gap-2">
+                          <FileText size={12} className="text-slate-400" />{" "}
+                          {g.label}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono bg-white px-2 py-1 rounded border border-slate-100">
+                          {g.value}
                         </div>
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-sm text-slate-400 p-4 text-center">
-                    No audit log entries recorded for this agent yet.
-                  </div>
-                )}
+                    ))
+                  )}
+                </div>
+                <div className="mt-6 text-[10px] text-slate-400 leading-tight">
+                  Orphaned agent risk: missing metadata prevents automated cost
+                  & compliance chargeback.
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-        </>
+
+            {/* CHARTS (3 Columns) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Posture Breakdown
+                  </h3>
+                  <span className="text-[10px] font-bold text-slate-800">
+                    {passes.length + violations.length + gaps.length} Total
+                    Controls Evaluated
+                  </span>
+                </div>
+                <div className="h-48 relative w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {donutData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-[-10px]">
+                    <span className="text-2xl font-bold text-slate-800">
+                      {Math.round(
+                        (passes.length /
+                          (passes.length + violations.length + gaps.length)) *
+                          100,
+                      )}
+                      %
+                    </span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                      Fully Guarded
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-center gap-4 text-[10px] font-bold text-slate-500">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-green"></div>{" "}
+                    {passes.length} Passed
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-amber"></div>{" "}
+                    {violations.length} Violations
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>{" "}
+                    {gaps.length} Missing
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Access Perimeter Risk
+                  </h3>
+                  <span className="text-[10px] font-bold text-green">
+                    {radarData.filter((d) => d.A === 1).length} Egress Exposure
+                  </span>
+                </div>
+                <div className="h-48 relative w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="70%"
+                      data={radarData}
+                    >
+                      <PolarGrid stroke="#e2e8f0" />
+                      <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{ fill: "#64748b", fontSize: 9, fontWeight: 600 }}
+                      />
+                      <PolarRadiusAxis
+                        angle={30}
+                        domain={[0, 1]}
+                        tick={false}
+                        axisLine={false}
+                      />
+                      <Radar
+                        name="Agent"
+                        dataKey="A"
+                        stroke="#f59e0b"
+                        fill="#f59e0b"
+                        fillOpacity={0.2}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-center text-[10px] text-slate-500 font-medium">
+                  Zero uncontained lateral movement routes found across
+                  VPC/Egress.
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Scan Authenticity
+                  </h3>
+                  <span className="text-[10px] font-bold text-blue">
+                    {confidencePct / 100} Score
+                  </span>
+                </div>
+                <div className="h-48 relative w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={gaugeData}
+                        cx="50%"
+                        cy="75%"
+                        startAngle={180}
+                        endAngle={0}
+                        innerRadius={60}
+                        outerRadius={85}
+                        paddingAngle={0}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {gaugeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-end pb-8 pointer-events-none">
+                    <span className="text-3xl font-extrabold text-slate-800">
+                      {confidencePct}%
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Discovery Confidence
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-[10px] font-bold text-slate-500 px-2 mt-[-10px]">
+                  <span>
+                    Collector:{" "}
+                    {agent.source_collectors?.length
+                      ? agent.source_collectors.join(", ")
+                      : "Unknown"}
+                  </span>
+                  <span>
+                    Deep Scan:{" "}
+                    {metadata.deep && Object.keys(metadata.deep).length > 0
+                      ? "Verified"
+                      : "Not Scanned"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* BOTTOM SECTIONS */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* LEFT 2/3 COLUMN */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Behavior & Instructions */}
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide">
+                      <Activity size={16} className="text-blue" /> Agent
+                      Behavior & Instructions
+                    </h2>
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase">
+                      {agent.deployment_type || "Unknown"}
+                    </span>
+                  </div>
+
+                  <div className="mb-6">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 block">
+                      Purpose / Role Description
+                    </span>
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-[13px] text-slate-700 font-medium">
+                      {agent.evidence_reason ||
+                      metadata.description ||
+                      metadata.deep?.description ? (
+                        agent.evidence_reason ||
+                        metadata.description ||
+                        metadata.deep?.description
+                      ) : (
+                        <span className="text-slate-400 italic">
+                          No purpose description available
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        System Instruction Preview
+                      </span>
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            config.instruction ||
+                              metadata.instructionPreview ||
+                              metadata.deep?.instructionPreview ||
+                              "",
+                          )
+                        }
+                        className="text-[11px] font-bold text-blue hover:text-blue-700 flex items-center gap-1 transition-colors"
+                      >
+                        <Copy size={12} /> Copy
+                      </button>
+                    </div>
+                    <div className="bg-slate-900 border border-slate-800 rounded-lg p-5 font-mono text-[12px] text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap shadow-inner">
+                      {config.instruction ||
+                      metadata.instructionPreview ||
+                      metadata.deep?.instructionPreview ? (
+                        config.instruction ||
+                        metadata.instructionPreview ||
+                        metadata.deep?.instructionPreview
+                      ) : (
+                        <span className="text-slate-500 italic">
+                          No system instructions detected
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cloud Architecture */}
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                  <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide mb-6">
+                    <Cpu size={16} className="text-purple" /> Cloud Architecture
+                    & Identification
+                  </h2>
+
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-slate-200 bg-slate-50 rounded-lg p-3">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-0">
+                        Agent Endpoint ARN
+                      </span>
+                      <span className="text-[12px] font-mono font-bold text-blue break-all sm:text-right">
+                        {metadata.deep?.agentArn || agent.fingerprint}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-slate-200 bg-slate-50 rounded-lg p-3">
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 sm:mb-0">
+                        IAM Resource Role
+                      </span>
+                      <span className="text-[12px] font-mono font-bold text-blue break-all sm:text-right">
+                        {metadata.deep?.agentResourceRoleArn || "N/A"}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="border border-slate-200 bg-slate-50 rounded-lg p-4">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                          Foundation Model ID
+                        </span>
+                        <span className="text-[13px] font-mono font-bold text-slate-800">
+                          {agent.model ||
+                            metadata.deep?.foundationModel ||
+                            "Unknown"}
+                        </span>
+                      </div>
+                      <div className="border border-slate-200 bg-slate-50 rounded-lg p-4">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                          Encryption Standard
+                        </span>
+                        <span className="text-[13px] font-bold text-slate-600">
+                          {metadata.deep?.customerEncryptionKeyArn
+                            ? "Customer Managed Key"
+                            : "Platform Managed Key (Default)"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT 1/3 COLUMN */}
+              <div className="space-y-6">
+                {/* Data Classification & Privacy Risk */}
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+                  <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide mb-4">
+                    <Lock size={16} className="text-amber" /> Privacy Risk
+                  </h2>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      {
+                        label: "PHI Access",
+                        value: agent.data_access_classification?.phi_access,
+                      },
+                      {
+                        label: "PII Access",
+                        value: agent.data_access_classification?.pii_access,
+                      },
+                    ].map((item, i) => (
+                      <div
+                        key={i}
+                        className={`border rounded-lg p-3 flex justify-between items-center ${item.value ? "bg-amber/5 border-amber/20" : "bg-green/5 border-green/20"}`}
+                      >
+                        <span className="text-[12px] font-bold text-slate-700">
+                          {item.label}
+                        </span>
+                        <div
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase flex items-center gap-1 ${item.value ? "bg-amber/10 text-amber" : "bg-green/10 text-green"}`}
+                        >
+                          {item.value ? (
+                            <AlertTriangle size={12} />
+                          ) : (
+                            <CheckCircle2 size={12} />
+                          )}
+                          {item.value ? "Configured" : "Unconfigured"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 relative">
+                  <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-sm font-bold text-slate-800 uppercase flex items-center gap-2 tracking-wide">
+                      <Clock size={16} className="text-blue" /> Lifecycle &
+                      Audit Log
+                    </h2>
+                  </div>
+
+                  <div className="relative border-l-2 border-slate-100 ml-2 space-y-8 pb-4 max-h-96 overflow-y-auto pr-4">
+                    {logs.length > 0 ? (
+                      logs.map((log) => {
+                        const isSystem = log.log_type === "access";
+                        const isShadow =
+                          log.event_type === "agent.status_changed" &&
+                          log.summary.toLowerCase().includes("shadow");
+                        const isApproved =
+                          log.event_type === "agent.status_changed" &&
+                          log.summary.toLowerCase().includes("approved");
+                        const isImportantStatusChange = isShadow || isApproved;
+
+                        const bgClass = isShadow
+                          ? "bg-amber/10 border border-amber/20 rounded-lg p-3"
+                          : isApproved
+                            ? "bg-green/10 border border-green/20 rounded-lg p-3"
+                            : "";
+                        const dotClass = isShadow
+                          ? "bg-amber"
+                          : isApproved
+                            ? "bg-green"
+                            : isSystem
+                              ? "bg-slate-300"
+                              : "bg-green";
+                        const titleClass = isShadow
+                          ? "text-amber-800"
+                          : isApproved
+                            ? "text-green-800"
+                            : "text-slate-800";
+                        const tagClass = isShadow
+                          ? "bg-amber/20 text-amber-800"
+                          : isApproved
+                            ? "bg-green/20 text-green-800"
+                            : "";
+                        const descClass = isShadow
+                          ? "text-amber-700 font-medium"
+                          : isApproved
+                            ? "text-green-700 font-medium"
+                            : "text-slate-500";
+
+                        return (
+                          <div key={log.id} className="relative pl-6 pb-2">
+                            <div
+                              className={`absolute -left-[5px] ${isImportantStatusChange ? "top-4" : "top-1"} w-2 h-2 rounded-full ring-4 ring-white ${dotClass}`}
+                            ></div>
+                            <div className={bgClass}>
+                              <div className="flex justify-between items-start mb-1">
+                                <span
+                                  className={`text-[12px] font-bold ${titleClass}`}
+                                >
+                                  {log.event_type}
+                                  {isImportantStatusChange && (
+                                    <span
+                                      className={`ml-2 text-[9px] px-1.5 py-0.5 rounded uppercase ${tagClass}`}
+                                    >
+                                      Status Update
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">
+                                  {new Date(log.created_at).toLocaleString(
+                                    undefined,
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                </span>
+                              </div>
+                              <div
+                                className={`text-[11px] leading-relaxed ${descClass}`}
+                              >
+                                {log.summary}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="text-sm text-slate-400 p-4 text-center">
+                        No audit log entries recorded for this agent yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
 

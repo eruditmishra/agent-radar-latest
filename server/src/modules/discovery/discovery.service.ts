@@ -244,7 +244,27 @@ export async function listAgents(
 ) {
   const result = await repo.listDiscoveredAgents(tenantId, opts);
   return {
-    agents: result.agents.map(formatAgentResponse),
+    agents: result.agents.map((agent: any) => {
+      let riskScoreBreakdown = agent.riskScoreBreakdown;
+      if (riskScoreBreakdown === undefined) {
+        const assessment = (agent.assessment_time || agent.domains || agent.frameworks) ? {
+          domains: agent.domains,
+          frameworks: agent.frameworks,
+          evidence_completeness: agent.evidence_completeness,
+        } : null;
+        riskScoreBreakdown = assessment ? calculateAgentRiskScore(agent, assessment) : null;
+      }
+      const formatted = formatAgentResponse(agent);
+      delete (formatted as any).domains;
+      delete (formatted as any).frameworks;
+      delete (formatted as any).evidence_completeness;
+      delete (formatted as any).assessment_time;
+      return {
+        ...formatted,
+        riskScoreBreakdown,
+        risk_score: riskScoreBreakdown ? riskScoreBreakdown.finalScore : (agent.risk_score ?? null),
+      };
+    }),
     total: result.total
   };
 }
@@ -264,7 +284,12 @@ export async function getAgent(agentId: string, tenantId: string | null) {
   if (assessment) {
     riskScoreBreakdown = calculateAgentRiskScore(agent, assessment);
   }
-  return { ...formatAgentResponse(agent), findings, riskScoreBreakdown };
+  return {
+    ...formatAgentResponse(agent),
+    findings,
+    riskScoreBreakdown,
+    risk_score: riskScoreBreakdown ? riskScoreBreakdown.finalScore : null,
+  };
 }
 
 export function formatAgentResponse(agent: any) {

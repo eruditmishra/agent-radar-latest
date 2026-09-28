@@ -56,6 +56,42 @@ export interface DiscoveredAgent {
   request_remark?: string | null;
   approval_remark?: string | null;
   findings?: ScanFinding[];
+  risk_score?: number | null;
+  riskScoreBreakdown?: RiskScoreBreakdown | null;
+}
+
+export interface RiskFactor {
+  name: string;
+  points: number;
+  applied: boolean;
+}
+
+export interface RiskScoreBreakdown {
+  rawScore: number;
+  finalScore: number;
+  riskLevel: 'Critical' | 'High' | 'Medium' | 'Low';
+  components: {
+    intrinsicAttackSurface: {
+      score: number;
+      max: number;
+      factors: RiskFactor[];
+    };
+    governanceDeficits: {
+      score: number;
+      max: number;
+      factors: RiskFactor[];
+    };
+    owaspVulnerabilities: {
+      score: number;
+      max: number;
+      factors: RiskFactor[];
+    };
+    unknownMultiplier: {
+      applied: boolean;
+      multiplier: number;
+      reason: string | null;
+    };
+  };
 }
 
 export interface ScanFinding {

@@ -1,4 +1,5 @@
 import { db } from "../../db/client";
+import { calculateAgentRiskScore } from "../security/riskScore";
 import type {
   CloudConnector,
   CloudConnectorWithSecrets,
@@ -592,30 +593,30 @@ export async function listDiscoveredAgents(
   const params: unknown[] = [];
   let i = 1;
 
-  if (tenantId) { conds.push(`tenant_id = $${i++}`); params.push(tenantId); }
-  else          { conds.push(`tenant_id IS NULL`); }
+  if (tenantId) { conds.push(`da.tenant_id = $${i++}`); params.push(tenantId); }
+  else          { conds.push(`da.tenant_id IS NULL`); }
 
-  if (opts.provider)     { conds.push(`cloud_provider = $${i++}`); params.push(opts.provider); }
-  if (opts.integrationId)  { conds.push(`integration_id = $${i++}`);  params.push(opts.integrationId); }
+  if (opts.provider)     { conds.push(`da.cloud_provider = $${i++}`); params.push(opts.provider); }
+  if (opts.integrationId)  { conds.push(`da.integration_id = $${i++}`);  params.push(opts.integrationId); }
   if (opts.status) {
     const statuses = opts.status.split(',').map(s => s.trim());
     if (statuses.length > 1) {
-      conds.push(`status = ANY($${i++})`);
+      conds.push(`da.status = ANY($${i++})`);
       params.push(statuses);
     } else {
-      conds.push(`status = $${i++}`);
+      conds.push(`da.status = $${i++}`);
       params.push(opts.status);
     }
   }
-  if (opts.agentStatus)  { conds.push(`agent_status = $${i++}`);  params.push(opts.agentStatus); }
-  if (opts.riskIndicator){ conds.push(`$${i++} = ANY(risk_indicators)`); params.push(opts.riskIndicator); }
-  if (opts.model)        { conds.push(`model = $${i++}`);         params.push(opts.model); }
-  if (opts.owner)        { conds.push(`owner = $${i++}`);         params.push(opts.owner); }
-  if (opts.type)         { conds.push(`deployment_type = $${i++}`); params.push(opts.type); }
+  if (opts.agentStatus)  { conds.push(`da.agent_status = $${i++}`);  params.push(opts.agentStatus); }
+  if (opts.riskIndicator){ conds.push(`$${i++} = ANY(da.risk_indicators)`); params.push(opts.riskIndicator); }
+  if (opts.model)        { conds.push(`da.model = $${i++}`);         params.push(opts.model); }
+  if (opts.owner)        { conds.push(`da.owner = $${i++}`);         params.push(opts.owner); }
+  if (opts.type)         { conds.push(`da.deployment_type = $${i++}`); params.push(opts.type); }
   
   if (opts.search) {
     const term = `%${opts.search}%`;
-    conds.push(`(name ILIKE $${i} OR owner ILIKE $${i} OR model ILIKE $${i})`);
+    conds.push(`(da.name ILIKE $${i} OR da.owner ILIKE $${i} OR da.model ILIKE $${i})`);
     params.push(term);
     i++;
   }
@@ -624,13 +625,13 @@ export async function listDiscoveredAgents(
   
   // Get total count
   const countRes = await db.query(
-    `SELECT COUNT(*) FROM discovered_agents ${where}`,
+    `SELECT COUNT(*) FROM discovered_agents da ${where}`,
     params
   );
   const total = parseInt(countRes.rows[0].count, 10);
 
-  // Sorting
-  const allowedSortFields = ['name', 'model', 'cloud_provider', 'owner', 'deployment_type', 'confidence_score', 'created_at', 'status'];
+  const isRiskSort = opts.sortBy === 'risk_score' || opts.sortBy === 'riskScore';
+  const allowedSortFields = ['name', 'model', 'cloud_provider', 'owner', 'deployment_type', 'confidence_score', 'risk_score', 'riskScore', 'created_at', 'status'];
   const sortBy = allowedSortFields.includes(opts.sortBy || '') ? opts.sortBy : 'created_at';
   const sortOrder = opts.sortOrder === 'asc' ? 'ASC' : 'DESC';
   const nullsSort = sortOrder === 'ASC' ? 'NULLS FIRST' : 'NULLS LAST';
@@ -638,13 +639,68 @@ export async function listDiscoveredAgents(
   const pLimit = opts.limit ?? 50;
   const pOffset = opts.offset ?? 0;
 
+  if (isRiskSort) {
+    const allRes = await db.query(
+      `SELECT da.*, asa.assessment_time, asa.domains, asa.frameworks, asa.evidence_completeness
+       FROM discovered_agents da
+       LEFT JOIN agent_security_assessments asa ON da.id = asa.agent_id
+       ${where}
+       ORDER BY da.created_at DESC, da.id DESC`,
+      params,
+    );
+
+    const mapped = allRes.rows.map((row: any) => {
+      const assessment = (row.assessment_time || row.domains || row.frameworks) ? {
+        domains: row.domains,
+        frameworks: row.frameworks,
+        evidence_completeness: row.evidence_completeness,
+      } : null;
+      const riskScoreBreakdown = assessment ? calculateAgentRiskScore(row, assessment) : null;
+      return {
+        ...row,
+        riskScoreBreakdown,
+        risk_score: riskScoreBreakdown ? riskScoreBreakdown.finalScore : null,
+      };
+    });
+
+    mapped.sort((a: any, b: any) => {
+      const scoreA = a.risk_score;
+      const scoreB = b.risk_score;
+      if (scoreA === null && scoreB === null) return 0;
+      if (scoreA === null) return 1;
+      if (scoreB === null) return -1;
+      return opts.sortOrder === 'asc' ? scoreA - scoreB : scoreB - scoreA;
+    });
+
+    const paginated = mapped.slice(pOffset, pOffset + pLimit);
+    return { agents: paginated, total };
+  }
+
   const res = await db.query(
-    `SELECT * FROM discovered_agents ${where}
-     ORDER BY ${sortBy} ${sortOrder} ${nullsSort}, id DESC
+    `SELECT da.*, asa.assessment_time, asa.domains, asa.frameworks, asa.evidence_completeness
+     FROM discovered_agents da
+     LEFT JOIN agent_security_assessments asa ON da.id = asa.agent_id
+     ${where}
+     ORDER BY da.${sortBy} ${sortOrder} ${nullsSort}, da.id DESC
      LIMIT $${i++} OFFSET $${i++}`,
     [...params, pLimit, pOffset],
   );
-  return { agents: res.rows, total };
+
+  const mapped = res.rows.map((row: any) => {
+    const assessment = (row.assessment_time || row.domains || row.frameworks) ? {
+      domains: row.domains,
+      frameworks: row.frameworks,
+      evidence_completeness: row.evidence_completeness,
+    } : null;
+    const riskScoreBreakdown = assessment ? calculateAgentRiskScore(row, assessment) : null;
+    return {
+      ...row,
+      riskScoreBreakdown,
+      risk_score: riskScoreBreakdown ? riskScoreBreakdown.finalScore : null,
+    };
+  });
+
+  return { agents: mapped, total };
 }
 
 export async function getAgentFilters(tenantId: string | null) {

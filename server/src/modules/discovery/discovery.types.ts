@@ -418,6 +418,8 @@ export interface DiscoveredAgent {
   status: AgentGovernanceStatus;
   category: string | null;
   confidence_score: number | null;
+  risk_score?: number | null;
+  riskScoreBreakdown?: any;
   metadata: Record<string, unknown> | null;
   agent_config: Record<string, unknown> | null;
   agent_access: Record<string, unknown> | null;

@@ -75,7 +75,7 @@ export default function ProviderModal({
 
       await onAdd(provider.id, {
         provider: provider.id,
-        name: `${provider.name} Connection`,
+        name: connectionName || `${provider.name} Connection`,
         environment: "production",
         config,
         secrets,
@@ -190,7 +190,10 @@ export default function ProviderModal({
                 </h3>
                 {canManage && (
                   <button
-                    onClick={() => setView("add")}
+                    onClick={() => {
+                      setConnectionName(`${provider.name} Connection`);
+                      setView("add");
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-brand/10 text-brand rounded hover:bg-brand/20 transition-colors text-[12px] font-bold"
                   >
                     <Plus size={14} /> Add Connection
@@ -266,20 +269,18 @@ export default function ProviderModal({
           ) : (
             <form onSubmit={view === "edit" ? handleEditSubmit : handleAddSubmit} className="flex flex-col h-full">
               <div className="flex-1 space-y-4">
-                {view === "edit" && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[12px] font-bold text-text-secondary">
-                      Connection Name <span className="text-red">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={connectionName}
-                      onChange={(e) => setConnectionName(e.target.value)}
-                      className="w-full bg-bg-root border border-glass-border-dim rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-                    />
-                  </div>
-                )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[12px] font-bold text-text-secondary">
+                    Connection Name <span className="text-red">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={connectionName}
+                    onChange={(e) => setConnectionName(e.target.value)}
+                    className="w-full bg-bg-root border border-glass-border-dim rounded-lg px-3 py-2 text-[13px] text-text-primary focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+                  />
+                </div>
                 {provider.fields.map(field => {
                   const isSecret = field.type === "password";
                   const label = isSecret && view === "edit" ? `${field.label} (unchanged)` : field.label;

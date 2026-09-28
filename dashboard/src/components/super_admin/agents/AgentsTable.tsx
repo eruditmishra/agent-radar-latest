@@ -79,15 +79,15 @@ export default function AgentsTable({
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-glass-border-dim text-[11px] font-extrabold text-text-ghost uppercase tracking-wider">
+            <tr className="border-b border-glass-border-dim text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
               <SortableHeader field="name" label="Name" />
               <SortableHeader field="model" label="Model Used" />
               <SortableHeader field="cloud_provider" label="Provider" />
               <SortableHeader field="owner" label="Owner" />
               {/* <SortableHeader field="deployment_type" label="Type" /> */}
               <SortableHeader
-                field="confidence_score"
-                label="Confidence"
+                field="risk_score"
+                label="Risk Score"
                 align="right"
               />
               <SortableHeader field="created_at" label="Discovered At" />
@@ -134,10 +134,43 @@ export default function AgentsTable({
                   {/* <td className="py-3 px-3 text-text-secondary text-[12px] capitalize">
                     {agent.deployment_type || "—"}
                   </td> */}
-                  <td className="py-3 px-3 text-right pr-4 font-bold font-display">
-                    {agent.confidence_score != null
-                      ? `${Math.round(Number(agent.confidence_score) * 100)}%`
-                      : "—"}
+                  <td className="py-3 px-3 text-right pr-4 font-display">
+                    {agent.riskScoreBreakdown ? (
+                      <div className="inline-flex items-center gap-1.5 justify-end">
+                        <span
+                          className={`text-[13px] font-bold ${
+                            agent.riskScoreBreakdown.riskLevel === "Critical"
+                              ? "text-red-700"
+                              : agent.riskScoreBreakdown.riskLevel === "High"
+                                ? "text-orange-700"
+                                : agent.riskScoreBreakdown.riskLevel === "Medium"
+                                  ? "text-amber-800"
+                                  : "text-emerald-800"
+                          }`}
+                        >
+                          {agent.riskScoreBreakdown.finalScore}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide border shadow-xs ${
+                            agent.riskScoreBreakdown.riskLevel === "Critical"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : agent.riskScoreBreakdown.riskLevel === "High"
+                                ? "bg-orange-50 text-orange-700 border-orange-200"
+                                : agent.riskScoreBreakdown.riskLevel === "Medium"
+                                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                                  : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                          }`}
+                        >
+                          {agent.riskScoreBreakdown.riskLevel}
+                        </span>
+                      </div>
+                    ) : agent.risk_score != null ? (
+                      <span className="text-[13px] font-bold text-slate-800">
+                        {agent.risk_score}
+                      </span>
+                    ) : (
+                      <span className="text-text-muted text-[12px]">—</span>
+                    )}
                   </td>
                   <td className="py-3 px-3 text-text-secondary text-[12px] whitespace-nowrap">
                     {agent.created_at
