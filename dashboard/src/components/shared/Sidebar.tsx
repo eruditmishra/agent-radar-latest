@@ -5,6 +5,7 @@ import {
   Cpu,
   Link as LinkIcon,
   Shield,
+  ShieldCheck,
   Users,
   Search,
   FileText,
@@ -25,6 +26,7 @@ export default function Sidebar() {
   const canViewAutoDiscovery = usePermission("auto_discovery_config", "view");
   const canViewAgentAuditLogs = usePermission("agent_audit_logs", "view");
   const canViewUserManagement = usePermission("user_management", "view");
+  const canViewAssessments = usePermission("assessments", "view");
 
   const activeClass =
     "bg-white shadow-[0_4px_12px_rgba(100,120,200,0.1),inset_0_1px_0_rgba(255,255,255,1)] text-brand border border-glass-border translate-x-1";
@@ -144,6 +146,22 @@ export default function Sidebar() {
                 Auto Discovery
               </NavLink>
             )}
+          </div>
+        )}
+
+        {/* Governance & Compliance */}
+        {canViewAssessments && (
+          <div>
+            <div className="text-[10px] font-bold text-text-muted tracking-widest uppercase mb-3 ml-2">
+              Governance &amp; Compliance
+            </div>
+            <NavLink
+              to="/assessments"
+              className={({ isActive }) => navClass(isActive)}
+            >
+              <ShieldCheck size={16} />
+              Assessments
+            </NavLink>
           </div>
         )}
 

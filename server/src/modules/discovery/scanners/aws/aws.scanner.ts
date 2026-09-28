@@ -241,7 +241,7 @@ export async function awsJson(request, optional = false) {
   return json;
 }
 
-async function awsXml(request) {
+export async function awsXml(request) {
   const res = await awsFetch(request);
   const text = await res.text();
   if (!res.ok)
@@ -1272,6 +1272,7 @@ export async function discoverAwsConnector(conn) {
   if (AWS_DISCOVERY_DEEP_SCAN) {
     const deep = await enrichAwsWithDeepScan({
       awsJson,
+      awsXml,
       conn,
       region: creds.region,
       observations: selected.filter(

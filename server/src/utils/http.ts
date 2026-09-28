@@ -24,6 +24,7 @@ export const ALLOW = {
     allowHostSuffixes: [
       ".services.ai.azure.com",
       ".cognitiveservices.azure.com",
+      ".models.ai.azure.com",
     ],
   },
   /** Azure OpenAI Assistants API hosts. */
@@ -70,10 +71,13 @@ export const ALLOW = {
     allowHosts: ["graph.microsoft.com"],
   },
   powerPlatformAdmin: {
-    allowHosts: ["api.bap.microsoft.com"],
+    allowHosts: ["api.bap.microsoft.com", "api.powerplatform.com"],
   },
+  // NOTE: previously `allowHosts: []` with no suffix — every Dataverse instance
+  // URL (https://<org>.crm.dynamics.com/...) was silently blocked outbound,
+  // so Power Platform / Copilot Studio agent discovery could never succeed.
   dataverse: {
-    allowHosts: [], // populated dynamically per environment
+    allowHostSuffixes: [".dynamics.com", ".crm.dynamics.com", ".api.crm.dynamics.com"],
   },
   defender: {
     allowHosts: [

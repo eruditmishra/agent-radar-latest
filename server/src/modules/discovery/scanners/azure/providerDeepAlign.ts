@@ -23,7 +23,9 @@ import {
 export const AWS_DEEP_COMPAT = "aws-deep.v2";
 
 function asObject(value) {
-  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
 }
 
 function asArray(value) {
@@ -76,7 +78,12 @@ export function normalizeAlignedTools(tools, source = "provider_list") {
       const risk_flags =
         row.risk_flags && typeof row.risk_flags === "object"
           ? row.risk_flags
-          : inferToolRiskFlags({ name, description, parameters_schema, source: type || source });
+          : inferToolRiskFlags({
+              name,
+              description,
+              parameters_schema,
+              source: type || source,
+            });
       return emptyTool({
         name,
         description: description || null,
@@ -97,7 +104,12 @@ function normalizeKnowledgeBases(items) {
   return asArray(items)
     .map((kb, index) => {
       if (typeof kb === "string") {
-        return { id: null, name: kb, description: null, knowledgeBaseState: null };
+        return {
+          id: null,
+          name: kb,
+          description: null,
+          knowledgeBaseState: null,
+        };
       }
       const row = asObject(kb);
       const name = firstString(row.name, row.id, row.knowledgeBaseId);
@@ -135,11 +147,18 @@ export function buildCompatibleDeepProfile({
   extra = {},
   fetchedAt = null,
 } = {}) {
-  const normalizedTools = normalizeAlignedTools(tools, deepScan || `${provider}_deep`);
+  const normalizedTools = normalizeAlignedTools(
+    tools,
+    deepScan || `${provider}_deep`,
+  );
   const normalizedKbs = normalizeKnowledgeBases(knowledgeBases);
-  const hasBody = typeof instructionText === "string" && instructionText.trim().length > 0;
+  const hasBody =
+    typeof instructionText === "string" && instructionText.trim().length > 0;
   const built = hasBody
-    ? buildInstructionsFromText(instructionText, deepScan || `${provider}_instructions`)
+    ? buildInstructionsFromText(
+        instructionText,
+        deepScan || `${provider}_instructions`,
+      )
     : null;
 
   const instructions = hasBody
@@ -188,7 +207,10 @@ export function buildCompatibleDeepProfile({
     instructionPreview: instructions.preview,
     instructionHash: instructions.hash,
     instructionLength: instructions.length || 0,
-    guardrails: guardrails || { present: false, note: "No guardrail config collected for this provider." },
+    guardrails: guardrails || {
+      present: false,
+      note: "No guardrail config collected for this provider.",
+    },
     tools: normalizedTools,
     toolCount: normalizedTools.length,
     actionGroups: normalizedTools.map((t) => ({
@@ -200,7 +222,9 @@ export function buildCompatibleDeepProfile({
     actionGroupCount: normalizedTools.length,
     knowledgeBases: normalizedKbs,
     knowledgeBaseCount: normalizedKbs.length,
-    codeInterpreter: normalizedTools.some((t) => t.risk_flags?.can_execute_code),
+    codeInterpreter: normalizedTools.some(
+      (t) => t.risk_flags?.can_execute_code,
+    ),
     limitations: asArray(limitations),
     ...asObject(extra),
   };
@@ -233,7 +257,9 @@ function adversarialExtrasFromDeep(deep, extras = {}) {
     hasPhi: extras.hasPhi ?? null,
     dataClasses: asArray(extras.dataClasses),
     internetAccess: extras.internetAccess ?? null,
-    codeExecution: Boolean(d.codeInterpreter) || tools.some((t) => t.risk_flags?.can_execute_code),
+    codeExecution:
+      Boolean(d.codeInterpreter) ||
+      tools.some((t) => t.risk_flags?.can_execute_code),
     inboundTriggers: asArray(extras.inboundTriggers),
     evidence: asArray(extras.evidence).length
       ? asArray(extras.evidence)
@@ -250,39 +276,51 @@ function adversarialExtrasFromDeep(deep, extras = {}) {
  * Stamp metadata.deep + adversarial_surface (+ status fields) onto an observation.
  * Skips if deep already present unless force=true.
  */
-export function stampDeepAndAdversarial(observation, {
-  deep,
-  instructionText = null,
-  extras = {},
-  status = "ok",
-  error = null,
-  force = false,
-} = {}) {
+export function stampDeepAndAdversarial(
+  observation,
+  {
+    deep,
+    instructionText = null,
+    extras = {},
+    status = "ok",
+    error = null,
+    force = false,
+  } = {},
+) {
   if (!observation || typeof observation !== "object") return observation;
-  const obs = { ...observation, metadata: { ...asObject(observation.metadata) } };
+  const obs = {
+    ...observation,
+    metadata: { ...asObject(observation.metadata) },
+  };
 
   if (obs.metadata.deep && !force && status === "ok") {
     if (!obs.metadata.adversarial_surface) {
-      return attachAdversarialSurface(obs, adversarialExtrasFromDeep(obs.metadata.deep, {
-        instructionText,
-        ...extras,
-      }));
+      return attachAdversarialSurface(
+        obs,
+        adversarialExtrasFromDeep(obs.metadata.deep, {
+          instructionText,
+          ...extras,
+        }),
+      );
     }
     return obs;
   }
 
   if (status !== "ok" || !deep) {
-    obs.metadata.deepScan = deep?.deepScan || obs.metadata.deepScan || "provider_deep";
-    obs.metadata.deepScanSchema = deep?.schemaVersion || obs.metadata.deepScanSchema || null;
+    obs.metadata.deepScan =
+      deep?.deepScan || obs.metadata.deepScan || "provider_deep";
+    obs.metadata.deepScanSchema =
+      deep?.schemaVersion || obs.metadata.deepScanSchema || null;
     obs.metadata.deepScanStatus = status;
-    obs.metadata.deepScanError = error || (status === "ok" ? null : "Deep enrichment unavailable");
+    obs.metadata.deepScanError =
+      error || (status === "ok" ? null : "Deep enrichment unavailable");
     if (status === "ok" && deep) {
       obs.metadata.deep = deep;
       obs.metadata.deepScanError = null;
     }
     return attachAdversarialSurface(obs, {
       evidence: [
-        ...(asArray(extras.evidence)),
+        ...asArray(extras.evidence),
         status !== "ok" ? `Deep scan status=${status}` : null,
       ].filter(Boolean),
       ...extras,
@@ -327,7 +365,8 @@ export function stampDeepAndAdversarial(observation, {
  * Idempotent if deep already present.
  */
 export function alignObservationWithDeepSurface(observation, signals = {}) {
-  const obs = observation && typeof observation === "object" ? observation : null;
+  const obs =
+    observation && typeof observation === "object" ? observation : null;
   if (!obs) return observation;
 
   const meta = asObject(obs.metadata);
@@ -349,15 +388,15 @@ export function alignObservationWithDeepSurface(observation, signals = {}) {
     meta.cloud_provider ||
     "unknown";
 
-  const schema = signals.schema || `${String(provider).replace(/[^a-z0-9]+/gi, "_").toLowerCase()}-deep.v1`;
+  const schema =
+    signals.schema ||
+    `${String(provider)
+      .replace(/[^a-z0-9]+/gi, "_")
+      .toLowerCase()}-deep.v1`;
   const deepScan = signals.deepScan || `${provider}_list_align`;
 
   const tools =
-    signals.tools ||
-    meta.agentConfig?.tools ||
-    obs.tools ||
-    meta.tools ||
-    [];
+    signals.tools || meta.agentConfig?.tools || obs.tools || meta.tools || [];
 
   const instructionText =
     signals.instructionText ||
@@ -372,9 +411,11 @@ export function alignObservationWithDeepSurface(observation, signals = {}) {
     provider,
     agentId: signals.agentId || meta.agentId || obs.agent?.agentId || null,
     agentName: signals.agentName || obs.name || obs.agent?.agentName || null,
-    agentType: signals.agentType || meta.agentType || obs.agent?.agentType || null,
+    agentType:
+      signals.agentType || meta.agentType || obs.agent?.agentType || null,
     foundationModel: signals.foundationModel || obs.model || null,
-    description: signals.description || meta.description || meta.shortDescription || null,
+    description:
+      signals.description || meta.description || meta.shortDescription || null,
     instructionText,
     tools,
     knowledgeBases:
@@ -383,7 +424,10 @@ export function alignObservationWithDeepSurface(observation, signals = {}) {
       meta.knowledgeSources ||
       [],
     identity: signals.identity || {
-      identity_type: provider === "azure" || meta.azureType ? "azure_managed_identity" : provider,
+      identity_type:
+        provider === "azure" || meta.azureType
+          ? "azure_managed_identity"
+          : provider,
       note: "List-level alignment — no AWS-style execution role ARN collected.",
     },
     guardrails: signals.guardrails || null,
@@ -415,7 +459,10 @@ export function alignObservationWithDeepSurface(observation, signals = {}) {
 /**
  * Map over observations and align confirmed agents that lack deep/adversarial.
  */
-export function alignObservationsWithDeepSurface(observations, signalsFor = () => ({})) {
+export function alignObservationsWithDeepSurface(
+  observations,
+  signalsFor = () => ({}),
+) {
   return asArray(observations).map((obs) => {
     try {
       return alignObservationWithDeepSurface(obs, signalsFor(obs) || {});

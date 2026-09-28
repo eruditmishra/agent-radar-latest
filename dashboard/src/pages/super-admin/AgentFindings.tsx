@@ -320,7 +320,9 @@ export default function AgentFindings() {
       perimeterExposureCount
     );
 
-    const newWindow = window.open("", "_blank");
+    // Fix: Unsafe Use of Target blank — open with noopener,noreferrer so the new
+    // window has no access back to this window via window.opener.
+    const newWindow = window.open("", "_blank", "noopener,noreferrer");
     if (newWindow) {
       newWindow.document.write(htmlString);
       newWindow.document.close();

@@ -531,7 +531,6 @@ export async function listAksAiWorkloads(token, resource) {
           Authorization: `Bearer ${parsed.token}`,
           Accept: "application/json",
         },
-        skipTlsVerify: true,
       },
       policy,
     );
@@ -1285,7 +1284,12 @@ function agentObservationFromFinding(finding, resource, conn, classification) {
     });
   }
 
-  return alignObservationWithDeepSurface(
+  const foundryProvider =
+    finding.detectionMethod === "azure_assistants_api"
+      ? "azure_openai"
+      : "azure_ai_foundry";
+
+  const aligned = alignObservationWithDeepSurface(
     resourceToObservation(resource, conn, classification, {
       fingerprint: `azure-agent:${conn.config.subscriptionId}:${agentId}`,
       name: `${finding.agentName || agentId} (Azure Agent)`,
@@ -1309,7 +1313,7 @@ function agentObservationFromFinding(finding, resource, conn, classification) {
       },
     }),
     {
-      provider: "azure",
+      provider: foundryProvider,
       schema: "azure-deep.v1",
       deepScan:
         finding.detectionMethod === "azure_assistants_api"
@@ -1333,6 +1337,10 @@ function agentObservationFromFinding(finding, resource, conn, classification) {
       ],
     },
   );
+  // cloud_provider stays "azure" (infra fact); provider carries the specific AI
+  // platform (Foundry vs. plain Azure OpenAI Assistants) so the UI can tell them apart.
+  aligned.provider = foundryProvider;
+  return aligned;
 }
 
 function botServiceObservation(resource, conn, classification) {
@@ -2565,6 +2573,13 @@ const ENTRA_AGENT_ID_FALLBACK_URL =
   `?$select=${AGENT_IDENTITY_SELECT}`;
 
 function isAgentIdentityPrincipal(sp = {}) {
+  // NOTE: the fallback fetch (ENTRA_AGENT_ID_FALLBACK_URL) only $selects
+  // AGENT_IDENTITY_SELECT, which does NOT include agentIdentityBlueprintId or
+  // @odata.type — so those two checks are no-ops for that path and
+  // servicePrincipalType is the only signal Graph actually gives us there.
+  // (Previously this was tightened to require the other two fields, which
+  // silently zeroed out all agent detection for tenants relying on this
+  // fallback path — reverted.)
   return (
     sp.servicePrincipalType === "ServiceIdentity" ||
     sp["@odata.type"] === "#microsoft.graph.agentIdentity" ||
@@ -2690,6 +2705,9 @@ function entraAgentIdentityObservation(sp, conn, tenantId) {
         evidenceClass: "platform_agent",
         agentStatus: "confirmed",
         cloudProvider: "azure",
+        // Raw Graph displayName (pre "(Entra Agent ID)" suffix) — used to correlate
+        // this identity-plane finding with a same-agent Foundry Agents API finding.
+        displayName,
         tenantId,
         objectId: sp.id,
         appId: sp.appId || null,
@@ -2702,11 +2720,30 @@ function entraAgentIdentityObservation(sp, conn, tenantId) {
         tags: sp.tags || [],
         aiRelevant: true,
         environment: conn.environment,
+        accountEnabled: sp.accountEnabled !== undefined ? sp.accountEnabled : null,
+        // Security assessment hints for the OWASP evidence normalizer
+        security_collection_hints: {
+          // Identity plane was fully accessed
+          identity_plane: "complete",
+          // Definition plane (tools, instructions, guardrails) was NOT accessed
+          definition_plane: "not_accessed",
+          definition_plane_requires: "copilot_studio_or_agent365_definition_scan",
+          // Permission plane was NOT accessed
+          permission_plane: "not_accessed",
+          permission_plane_requires: "entra_app_permissions_graph_call",
+          // Network/runtime plane was NOT accessed
+          runtime_plane: "not_accessed",
+        },
         evidence: [
           "Listed via Microsoft Graph agentIdentity API (Entra Agent ID)",
           "Confirms a real agent identity — covers Copilot Studio and Agent 365-onboarded agents",
           "Does not require the object's display name to mention AI/agent/copilot",
-        ],
+          `objectId=${sp.id}`,
+          sp.appId ? `appId=${sp.appId}` : null,
+          sp.servicePrincipalType ? `servicePrincipalType=${sp.servicePrincipalType}` : null,
+          sp.accountEnabled !== undefined ? `accountEnabled=${sp.accountEnabled}` : null,
+          sp.createdDateTime ? `createdDateTime=${sp.createdDateTime}` : null,
+        ].filter(Boolean),
       },
       relationships: [
         {
@@ -2733,6 +2770,9 @@ function entraAgentIdentityObservation(sp, conn, tenantId) {
       tools: [],
       limitations: [
         "Entra Agent ID confirms the agent identity; tools/instructions live on Copilot Studio / Agent 365 definition planes.",
+        "Tools collection_status=not_available: definition plane (Copilot Studio / Agent 365) was not accessed.",
+        "Permissions collection_status=not_collected: requires separate Graph application permissions query.",
+        "Guardrail/policy configuration lives on the definition plane — not accessible from identity plane.",
       ],
     },
   );
@@ -3547,13 +3587,113 @@ export async function discoverAgent365CatalogForAzure(
   };
 }
 
+function normalizeAgentNameForCorrelation(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+/**
+ * The ARM Foundry Agents API plane and the Graph Entra Agent ID plane discover
+ * the SAME underlying agents independently, with no shared key. Left alone,
+ * every Foundry agent shows up twice: once with the real name/model/provider
+ * (from ARM), and once as a generic "<verbose Entra name> (Entra Agent ID)"
+ * row with model="microsoft-agent-identity" and provider="entra_agent_id"
+ * (from Graph). When both are present, fold the identity-plane confirmation
+ * into the authoritative Foundry finding and drop the redundant placeholder
+ * row instead of showing both in the inventory.
+ */
+function correlateEntraIdentitiesWithFoundryAgents(observations) {
+  const foundryCandidates = observations
+    .filter(
+      (o) =>
+        o?.metadata?.discoveryMode === "azure-agent-api" && o?.agent?.detected,
+    )
+    .map((o) => ({
+      obs: o,
+      normalizedName: normalizeAgentNameForCorrelation(o.agent?.agentName),
+    }))
+    // Require a reasonably specific name — short/generic names risk false-positive merges.
+    .filter((c) => c.normalizedName.length >= 4)
+    .sort((a, b) => b.normalizedName.length - a.normalizedName.length);
+
+  if (!foundryCandidates.length) return observations;
+
+  const kept = [];
+  for (const obs of observations) {
+    if (obs?.metadata?.discoveryMode !== "entra-agent-id-graph") {
+      kept.push(obs);
+      continue;
+    }
+    const normalizedDisplayName = normalizeAgentNameForCorrelation(
+      obs.metadata?.displayName || obs.name,
+    );
+    const match = foundryCandidates.find((c) =>
+      normalizedDisplayName.includes(c.normalizedName),
+    );
+    if (!match) {
+      kept.push(obs);
+      continue;
+    }
+    const target = match.obs;
+    target.metadata.security_collection_hints = {
+      ...(target.metadata.security_collection_hints || {}),
+      identity_plane: "complete",
+    };
+    target.metadata.entraIdentity = {
+      objectId: obs.metadata?.objectId || null,
+      appId: obs.metadata?.appId || null,
+      accountEnabled:
+        obs.metadata?.accountEnabled !== undefined
+          ? obs.metadata.accountEnabled
+          : null,
+    };
+    target.metadata.evidence = [
+      ...(target.metadata.evidence || []),
+      `Correlated with Entra Agent ID objectId=${obs.metadata?.objectId || "?"}`,
+    ];
+    // Drop the generic identity-plane row — the Foundry finding already carries
+    // its real name/model/provider plus this identity confirmation.
+  }
+  return kept;
+}
+
 /* =========================================================================
  * NEW: Single-scanner entry point
  *
  * Runs ARM + Entra Agent ID + Power Platform + Teams catalog + Agent 365
  * Graph catalog + (optional) M365 Agent Registry for one connector.
  * ========================================================================= */
-export async function discoverAzureEcosystem(conn) {
+/**
+ * DISABLED — kept for reference only. Live Azure scans use
+ * discoverAzureScanner in azure.scanner.ts. Calling this directly returns an
+ * empty, clearly-labeled "disabled" result instead of silently running the
+ * old dual-collector (ARM + Entra Graph, undeduplicated) pipeline.
+ */
+export async function discoverAzureEcosystem() {
+  return {
+    observations: [],
+    discoveryErrors: [
+      {
+        collector: "azure-legacy",
+        discoveryType: "legacy-scanner",
+        discoveryStatus: "disabled",
+        error:
+          "The legacy Azure ecosystem scanner is disabled. Live Azure scans use discoverAzureScanner in azure.scanner.ts.",
+      },
+    ],
+    stats: {
+      disabled: true,
+      legacyScanner: "azure.deepscanner.discoverAzureEcosystem",
+      agentsDiscovered: 0,
+      cloudResourcesIngested: 0,
+      discoveryErrors: 1,
+    },
+    statsByCollector: {},
+  };
+}
+
+async function discoverAzureEcosystemLegacyDisabled(conn) {
   const creds = {
     tenantId: conn.config.tenantId,
     clientId: conn.config.clientId,
@@ -3619,6 +3759,11 @@ export async function discoverAzureEcosystem(conn) {
     };
   }
 
+  const correlatedObservations =
+    correlateEntraIdentitiesWithFoundryAgents(observations);
+  observations.length = 0;
+  observations.push(...correlatedObservations);
+
   const armStats = statsByCollector.arm || {};
   const confirmedAgents = observations.filter(
     (o) => o?.metadata?.agentStatus === "confirmed",
@@ -3677,6 +3822,17 @@ export async function discoverAzureEcosystem(conn) {
       e.collector === "agent365Catalog" &&
       e.discoveryStatus === "permission_denied",
   );
+  const foundryAgentsFound = observations.filter(
+    (o) => o?.metadata?.discoveryMode === "azure-agent-api" && o?.agent?.detected,
+  ).length;
+  const foundryDenied = discoveryErrors.some(
+    (e) =>
+      e.collector === "arm" &&
+      (e.discoveryType === "foundry-agent" ||
+        e.discoveryType === "foundry-projects" ||
+        e.discoveryType === "cognitive-account") &&
+      e.discoveryStatus === "permission_denied",
+  );
   if (stats.ecosystem.entraAgentIdentities === 0 && entraDenied) {
     stats.warning =
       "Entra Agent identities not readable — grant AgentIdentity.Read.All on the connector app (same Application ID as the Visentra Azure connector), admin-consent, then re-scan. Entra UI agents will not appear until Graph allows GET /servicePrincipals/microsoft.graph.agentIdentity.";
@@ -3688,6 +3844,12 @@ export async function discoverAzureEcosystem(conn) {
   } else if (stats.ecosystem.agent365CatalogAgents === 0 && a365Denied) {
     stats.warning =
       "Agent 365 catalog denied — grant CopilotPackages.Read.All + Agent 365 license, admin-consent, then re-scan.";
+  } else if (
+    stats.ecosystem.entraAgentIdentities > 0 &&
+    foundryAgentsFound === 0 &&
+    foundryDenied
+  ) {
+    stats.warning = `Found ${stats.ecosystem.entraAgentIdentities} agent identit${stats.ecosystem.entraAgentIdentities === 1 ? "y" : "ies"} via Entra Graph, but the Azure AI Foundry Agents API denied access, so real agent name/foundation model/provider could not be resolved — the identity-plane placeholders (model="microsoft-agent-identity") are being shown instead. Grant the connector's service principal the "Cognitive Services User" (or "Azure AI User") RBAC role on the Foundry/Cognitive Services account, then re-scan.`;
   }
 
   return {

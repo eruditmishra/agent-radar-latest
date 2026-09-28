@@ -3,8 +3,8 @@
  * Adversarial-testing inventory model for agentic red teaming.
  *
  * Designed as attack-surface input for AgentBreaker / SIRAJ / DeepTeam / PyRIT style
- * frameworks and aligned with OWASP LLM Top 10 (2025/26) + Agentic ASI01â€“ASI10 themes:
- * tool misuse, prompt injection, over-permissioned identity, sensitive data reach,
+ * frameworks and aligned with the OWASP AI Agents Top 10 (2026) agentic threat themes:
+ * tool misuse, goal/instruction manipulation, over-permissioned identity, sensitive data reach,
  * memory/KB poisoning surfaces, and unsafe connectivity.
  *
  * Partial data is expected â€” every block carries confidence + evidence when possible.
@@ -179,8 +179,7 @@ export function emptyAdversarialSurface(overrides = {}) {
       ownership_status: null,
     },
     owasp_hints: {
-      llm_top10: [],
-      agentic_asi: [],
+      agentic_ai: [],
     },
     ...overrides,
   };
@@ -399,59 +398,48 @@ export function buildInstructionsFromText(text, source = "bedrock_get_agent") {
 }
 
 /**
- * Derive OWASP-oriented attack-surface hints from populated P0/P1 fields.
- * Hints are advisory tags for red-team prioritization â€” not vulnerability findings.
+ * Derive agentic attack-surface hints from populated P0/P1 fields.
+ * Hints are advisory tags for red-team prioritization â€” not vulnerability
+ * findings. OWASP LLM Top 10 hinting has been retired; agents are now
+ * testified against OWASP AI Agents 2026, NIST AI RMF, and ISO/IEC 42001
+ * via the structured evidence-based assessment in modules/security.
  */
 export function deriveOwaspHints(surface) {
-  const llm = new Set();
   const asi = new Set();
   const tools = surface.tools || [];
   const risky = tools.some((t) =>
     Object.values(t.risk_flags || {}).some(Boolean),
   );
   if (tools.length) {
-    llm.add("LLM01_PromptInjection"); // tool-using agents amplify injection â†’ tool misuse
-    asi.add("ASI01_AgentGoalHijack");
-    asi.add("ASI02_ToolMisuse");
+    asi.add("AAI01_AuthorizationHijack");
+    asi.add("AAI02_GoalManipulation");
   }
   if (risky) {
-    llm.add("LLM06_ExcessiveAgency");
-    asi.add("ASI05_UnexpectedCodeExecution");
-  }
-  if (surface.instructions?.present) {
-    llm.add("LLM01_PromptInjection");
-    if (surface.instructions.contains_safety_rules === false)
-      llm.add("LLM02_SensitiveInfoDisclosure");
+    asi.add("AAI03_ExcessiveAgency");
   }
   if (surface.data_access?.has_pii || surface.data_access?.has_phi) {
-    llm.add("LLM02_SensitiveInfoDisclosure");
-    asi.add("ASI04_DataExfiltration");
+    asi.add("AAI08_DataExfiltration");
   }
   if (surface.identity_and_access?.over_permissioned) {
-    llm.add("LLM06_ExcessiveAgency");
-    asi.add("ASI03_PrivilegeCompromise");
+    asi.add("AAI01_AuthorizationHijack");
   }
   if (
     surface.memory_and_context?.knowledge_bases?.length ||
     surface.memory_and_context?.has_memory
   ) {
-    llm.add("LLM08_VectorAndEmbeddingWeaknesses");
-    asi.add("ASI06_MemoryAndContextPoisoning");
+    asi.add("AAI04_MemoryPoisoning");
   }
   if (
     surface.connectivity?.internet_access ||
     surface.connectivity?.code_execution
   ) {
-    llm.add("LLM06_ExcessiveAgency");
-    asi.add("ASI08_CascadingFailures");
+    asi.add("AAI06_CascadingFailures");
   }
   if (surface.observability?.guardrails_detected === false) {
-    llm.add("LLM09_Misinformation");
-    asi.add("ASI10_InsufficientSafetyAlignment");
+    asi.add("AAI10_ObservabilityGaps");
   }
   return {
-    llm_top10: [...llm],
-    agentic_asi: [...asi],
+    agentic_ai: [...asi],
   };
 }
 
@@ -603,6 +591,7 @@ export function buildAdversarialSurface(obs = {}, extras = {}) {
     meta.deep?.role ||
     null;
 
+  const isPermsObj = extras.permissions && !Array.isArray(extras.permissions);
   const identity_and_access = emptyIdentityAndAccess({
     identity_type: roleArn
       ? "aws_iam_role"
@@ -611,8 +600,8 @@ export function buildAdversarialSurface(obs = {}, extras = {}) {
         : null,
     name: roleArn ? roleArn.split("/").pop() : obs.identity_used || null,
     arn: roleArn,
-    permissions: Array.isArray(extras.permissions) ? extras.permissions : [],
-    over_permissioned: extras.overPermissioned ?? null,
+    permissions: isPermsObj ? extras.permissions.declared_permissions : (Array.isArray(extras.permissions) ? extras.permissions : []),
+    over_permissioned: isPermsObj ? extras.permissions.over_permissioned : (extras.overPermissioned ?? null),
     credential_exposure_risk: Array.isArray(meta.envNames)
       ? meta.envNames.some((n) =>
           /secret|token|key|password|credential/i.test(n),
@@ -620,12 +609,17 @@ export function buildAdversarialSurface(obs = {}, extras = {}) {
         ? "medium"
         : "low"
       : "unknown",
-    confidence: roleArn ? "medium" : "low",
-    evidence: roleArn
+    confidence: isPermsObj ? extras.permissions.confidence : (roleArn ? "medium" : "low"),
+    evidence: isPermsObj ? extras.permissions.evidence : (roleArn
       ? [
           "IAM role ARN from Bedrock GetAgent / Lambda configuration (policy documents not expanded)",
         ]
-      : ["No execution role discovered"],
+      : ["No execution role discovered"]),
+    ...(isPermsObj ? {
+        privileged: extras.permissions.privileged,
+        write_capable: extras.permissions.write_capable,
+        admin_capable: extras.permissions.admin_capable
+    } : {})
   });
 
   const kbList = extras.knowledgeBases || meta.agentKnowledgeBases || [];

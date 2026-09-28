@@ -18,7 +18,10 @@ import {
   ValidationError,
 } from "../../shared/errors";
 import * as repo from "./discovery.repo";
+import { getSecurityAssessment } from "../security/security.repo";
+import { calculateAgentRiskScore } from "../security/riskScore";
 import * as audit from "../audit/audit.service";
+import { assessAndStore as securityAssessAndStore } from "../security/security.service";
 import type {
   CloudConnector,
   CloudConnectorWithSecrets,
@@ -236,7 +239,12 @@ export async function getAgent(agentId: string, tenantId: string | null) {
     throw new NotFoundError("Agent not found");
   }
   const findings = await repo.findScanFindingsByAgentId(agentId, tenantId);
-  return { ...formatAgentResponse(agent), findings };
+  const assessment = await getSecurityAssessment(agentId, tenantId);
+  let riskScoreBreakdown = null;
+  if (assessment) {
+    riskScoreBreakdown = calculateAgentRiskScore(agent, assessment);
+  }
+  return { ...formatAgentResponse(agent), findings, riskScoreBreakdown };
 }
 
 export function formatAgentResponse(agent: any) {
@@ -466,7 +474,7 @@ async function runConnectorScan(
       observations = (result.observations ?? []) as ScannerRawObservation[];
       discoveryErrors = result.discoveryErrors ?? [];
     } else if (connector.provider === "azure") {
-      const result = await (scanner as any).discoverAzureEcosystem?.(conn);
+      const result = await (scanner as any).discoverAzureScanner?.(conn);
       observations = (result?.observations ?? []) as ScannerRawObservation[];
       discoveryErrors = result?.discoveryErrors ?? [];
     } else if (connector.provider === "gcp") {
@@ -495,6 +503,15 @@ async function runConnectorScan(
         const saved = await repo.upsertDiscoveredAgent(tenantId, scanId, connector.id, obs);
         if (obs.metadata?.agentStatus === 'confirmed' || obs.metadata?.agentStatus === 'candidate') {
           agentsFound++;
+        }
+
+        // Security assessment — non-blocking, must not affect discovery pipeline
+        if (saved?.id) {
+          setImmediate(() => {
+            securityAssessAndStore(saved.id, tenantId, scanId).catch((err) => {
+              console.warn(`[security] assessAndStore failed for ${saved.id}:`, err?.message);
+            });
+          });
         }
 
         // Audit: agent.discovered (new) or agent.updated (rescan)
@@ -605,8 +622,12 @@ async function extractAndUpsertModels(
 
   for (const agent of agents) {
     const modelRefs = extractModelRefs(agent);
-    for (const { name, context } of modelRefs) {
-      const provider = inferModelProvider(name);
+    for (const { name, context, provider: explicitProvider } of modelRefs) {
+      // Prefer a provider identified directly from evidence (e.g. an
+      // AZURE_OPENAI_* env var) over the name-pattern guess — regex-based
+      // inference can't tell "gpt-4o via Azure OpenAI" from "gpt-4o via
+      // api.openai.com" just from the model name.
+      const provider = explicitProvider || inferModelProvider(name);
       const family = inferModelFamily(name);
       const isNewModel = !(await repo.findModelByNameProvider(tenantId, name, provider));
       const model = await repo.upsertDiscoveredModel(tenantId, {
@@ -667,16 +688,20 @@ async function extractAndUpsertModels(
 }
 
 /** Extract all model name references from a single discovered agent row. */
-function extractModelRefs(
+export function extractModelRefs(
   agent: DiscoveredAgent,
-): Array<{ name: string; context: string }> {
-  const refs: Array<{ name: string; context: string }> = [];
+): Array<{ name: string; context: string; provider?: string }> {
+  const refs: Array<{ name: string; context: string; provider?: string }> = [];
   const seen = new Set<string>();
 
-  function add(name: string | null | undefined, context: string) {
+  function add(
+    name: string | null | undefined,
+    context: string,
+    provider?: string,
+  ) {
     if (!name || name === "unknown" || seen.has(name)) return;
     seen.add(name);
-    refs.push({ name, context });
+    refs.push(provider ? { name, context, provider } : { name, context });
   }
 
   // Primary model field
@@ -695,6 +720,33 @@ function extractModelRefs(
   if (Array.isArray(metaModels)) {
     for (const m of metaModels) {
       if (typeof m === "string") add(m, "primary");
+    }
+  }
+
+  // From metadata.hostedRuntime.models[] — models declared inside a hosted
+  // Foundry agent's Container App (LangGraph/LangChain/etc.), extracted by
+  // the Azure scanner's extractHostedModelConfiguration(). Only "declared"
+  // entries with a resolved modelName are registered here — "unresolved"
+  // entries (bare deployment name/endpoint, no confirmed model) are kept in
+  // the agent's own metadata for visibility but never fabricated into a
+  // model record.
+  const hostedModels = (agent.metadata as any)?.hostedRuntime?.models as
+    | unknown[]
+    | undefined;
+  if (Array.isArray(hostedModels)) {
+    for (const m of hostedModels) {
+      const entry = m as Record<string, unknown>;
+      if (
+        entry?.discoveryStatus === "declared" &&
+        typeof entry.modelName === "string" &&
+        entry.modelName
+      ) {
+        add(
+          entry.modelName,
+          "primary",
+          typeof entry.provider === "string" ? entry.provider : undefined,
+        );
+      }
     }
   }
 

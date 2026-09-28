@@ -5,6 +5,27 @@ import type { DiscoveredAgent } from "../../../types/discovery";
 import { formatStatus } from "../../../pages/super-admin/DiscoveredModels";
 import { getAgentStatusStyle } from "../../../lib/agentStatus";
 
+const PROVIDER_LABELS: Record<string, string> = {
+  azure_ai_foundry: "Foundry",
+  azure_openai: "Azure OpenAI",
+  entra_agent_id: "Azure",
+  power_platform: "Power Platform",
+  microsoft_teams: "Microsoft Teams",
+  m365_copilot: "M365 Copilot",
+  openai: "OpenAI",
+  salesforce: "Salesforce",
+  workday: "Workday",
+  servicenow: "ServiceNow",
+  aws: "AWS",
+  gcp: "GCP",
+  azure: "Azure",
+};
+
+function formatProviderLabel(provider: string | null | undefined) {
+  if (!provider) return null;
+  return PROVIDER_LABELS[provider] || provider.replace(/_/g, " ");
+}
+
 interface AgentsTableProps {
   agents: DiscoveredAgent[];
   sortBy: string;
@@ -63,7 +84,7 @@ export default function AgentsTable({
               <SortableHeader field="model" label="Model Used" />
               <SortableHeader field="cloud_provider" label="Provider" />
               <SortableHeader field="owner" label="Owner" />
-              <SortableHeader field="deployment_type" label="Type" />
+              {/* <SortableHeader field="deployment_type" label="Type" /> */}
               <SortableHeader
                 field="confidence_score"
                 label="Confidence"
@@ -98,9 +119,10 @@ export default function AgentsTable({
                     {agent.model || "—"}
                   </td>
                   <td className="py-3 px-3">
-                    {agent.cloud_provider ? (
+                    {agent.provider || agent.cloud_provider ? (
                       <span className="bg-bg-root border border-glass-border-dim px-2 py-0.5 rounded text-[10px] font-semibold text-text-secondary capitalize">
-                        {agent.cloud_provider}
+                        {formatProviderLabel(agent.provider) ||
+                          agent.cloud_provider}
                       </span>
                     ) : (
                       "—"
@@ -109,9 +131,9 @@ export default function AgentsTable({
                   <td className="py-3 px-3 text-text-secondary text-[12px]">
                     {agent.owner || "—"}
                   </td>
-                  <td className="py-3 px-3 text-text-secondary text-[12px] capitalize">
+                  {/* <td className="py-3 px-3 text-text-secondary text-[12px] capitalize">
                     {agent.deployment_type || "—"}
-                  </td>
+                  </td> */}
                   <td className="py-3 px-3 text-right pr-4 font-bold font-display">
                     {agent.confidence_score != null
                       ? `${Math.round(Number(agent.confidence_score) * 100)}%`

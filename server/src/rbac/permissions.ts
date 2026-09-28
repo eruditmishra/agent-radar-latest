@@ -29,7 +29,8 @@ export type Resource =
   | "user_management"
   | "agent_audit_logs"
   | "scanning"
-  | "manual_approval";
+  | "manual_approval"
+  | "assessments";
 
 export type Action =
   | "view"
@@ -102,6 +103,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "agent_audit_logs", actions: ["view", "export"] },
     { resource: "scanning", actions: ["view", "manage"] },
     { resource: "manual_approval", actions: ["approve"] },
+    { resource: "assessments", actions: ["view"] },
   ],
 
   // ─── Admin ───────────────────────────────────────────────────────────────
@@ -124,6 +126,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "agent_audit_logs", actions: ["view", "export"] },
     { resource: "scanning", actions: ["view", "manage"] },
     // manual_approval: NOT accessible by admin
+    { resource: "assessments", actions: ["view"] },
   ],
 
   // ─── CISO ────────────────────────────────────────────────────────────────
@@ -143,6 +146,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "agent_audit_logs", actions: ["view", "export"] },
     // scanning: NOT accessible by CISO
     // manual_approval: NOT accessible by CISO
+    { resource: "assessments", actions: ["view"] },
   ],
 
   // ─── Security Analyst ────────────────────────────────────────────────────
@@ -162,6 +166,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "agent_audit_logs", actions: ["view"] },
     { resource: "scanning", actions: ["view"] },
     // manual_approval: NOT accessible by security_analyst
+    { resource: "assessments", actions: ["view"] },
   ],
 
   // ─── Auditor ─────────────────────────────────────────────────────────────
@@ -181,6 +186,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "agent_audit_logs", actions: ["view", "export"] },
     // scanning: NOT accessible by auditor
     // manual_approval: NOT accessible by auditor
+    { resource: "assessments", actions: ["view"] },
   ],
 };
 

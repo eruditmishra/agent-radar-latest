@@ -3,6 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { discoveryAPI, auditAPI } from "../../lib/api";
 import type { DiscoveredAgent } from "../../types/discovery";
 import UpdateAgentStatusModal from "../../components/super_admin/agents/UpdateAgentStatusModal";
+import AssessmentPanel from "../../components/super_admin/agents/AssessmentPanel";
+import RiskScoreBreakdownPanel from "../../components/super_admin/agents/RiskScoreBreakdownPanel";
 import { getAgentStatusStyle } from "../../lib/agentStatus";
 import {
   ArrowLeft,
@@ -41,6 +43,7 @@ export default function AgentDetails() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "owasp" | "risk">("overview");
 
   useEffect(() => {
     if (!id) return;
@@ -391,6 +394,22 @@ export default function AgentDetails() {
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">
+                  Risk Score
+                </span>
+                <span className={`text-lg font-bold ${
+                  (agent as any).riskScoreBreakdown?.riskLevel === 'Critical' ? 'text-red-600' :
+                  (agent as any).riskScoreBreakdown?.riskLevel === 'High' ? 'text-orange-600' :
+                  (agent as any).riskScoreBreakdown?.riskLevel === 'Medium' ? 'text-amber-500' :
+                  'text-emerald-500'
+                }`}>
+                  {(agent as any).riskScoreBreakdown ? `${(agent as any).riskScoreBreakdown.finalScore}/100` : "N/A"}
+                  <span className="text-xs ml-1">
+                    {(agent as any).riskScoreBreakdown?.riskLevel || ""}
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">
                   Confidence
                 </span>
                 <span className="text-lg font-bold text-blue">
@@ -434,7 +453,41 @@ export default function AgentDetails() {
           </div>
         </div>
 
-        {/* GOVERNANCE JOURNEY (Conditionally Approved/Shadow) */}
+        {/* TABS */}
+        <div className="flex border-b border-slate-200 mt-6 gap-6">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`pb-3 text-sm font-bold border-b-2 transition-colors ${activeTab === "overview" ? "border-blue text-blue" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+          >
+            Overview & Telemetry
+          </button>
+          <button
+            onClick={() => setActiveTab("owasp")}
+            className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "owasp" ? "border-blue text-blue" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+          >
+            <Shield size={16} className={activeTab === "owasp" ? "text-blue" : "text-slate-400"} />
+            Assessments
+          </button>
+          <button
+            onClick={() => setActiveTab("risk")}
+            className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "risk" ? "border-blue text-blue" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+          >
+            <Activity size={16} className={activeTab === "risk" ? "text-blue" : "text-slate-400"} />
+            Risk Breakdown
+          </button>
+        </div>
+
+        {activeTab === "owasp" ? (
+          <div className="mt-6">
+            <AssessmentPanel agentId={id!} />
+          </div>
+        ) : activeTab === "risk" ? (
+          <div className="mt-6">
+            <RiskScoreBreakdownPanel agent={agent} />
+          </div>
+        ) : (
+          <>
+            {/* GOVERNANCE JOURNEY (Conditionally Approved/Shadow) */}
         {showGovernanceJourney && (
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
@@ -1059,6 +1112,8 @@ export default function AgentDetails() {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
 
       {/* Security Controls Drawer */}

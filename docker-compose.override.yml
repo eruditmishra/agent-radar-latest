@@ -2,9 +2,12 @@ services:
   agentradar:
     build:
       target: dev
+
     environment:
       - NODE_ENV=development
+
     volumes:
       - ./server:/app
       - /app/node_modules
-    command: sh -c "npm ci && npm run migrate:up && npm run dev"
+
+    command: npm run dev

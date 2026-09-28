@@ -103,3 +103,92 @@ export interface ModelFilters {
   statuses: string[];
   riskLevels: string[];
 }
+
+// ── Multi-Framework Assessment Types ───────────────────────────────────────────
+// Agents are testified against OWASP AI Agents 2026, NIST AI RMF, and
+// ISO/IEC 42001. All three frameworks share this same control shape so the
+// UI can render them uniformly.
+
+export type AssessmentStatus = 'detected' | 'not_observed' | 'unknown' | 'not_applicable' | 'control_gap';
+
+export interface ControlAssessment {
+  framework_id: string;
+  control_id: string;
+  /** @deprecated alias of control_id */
+  id: string;
+  name: string;
+  category: string;
+  status: AssessmentStatus;
+  evidence_confidence: number;
+  assessment_confidence: number;
+  confidence_reason: string[];
+  assessment_type: 'configuration' | 'discovery' | 'runtime' | 'heuristic';
+  evidence: Array<{ fact: string; source: string; collection_method?: string; collected_at?: string | null }>;
+  missing_evidence: string[];
+  limitations: string[];
+  related_assets: string[];
+  related_tools: string[];
+  source_collectors: string[];
+  last_assessed: string;
+  requires_runtime_test: boolean;
+  recommended_next_scan: string[];
+}
+
+/** @deprecated use ControlAssessment */
+export type OWASPCategoryAssessment = ControlAssessment;
+
+export interface FrameworkMeta {
+  id: string;
+  name: string;
+  version: string;
+  controlCount: number;
+  category: 'Security' | 'Regulation' | 'Standard';
+  description: string;
+}
+
+export interface FrameworkAssessment {
+  meta: FrameworkMeta;
+  controls: Record<string, ControlAssessment>;
+}
+
+export interface EvidenceCompleteness {
+  overall: number;
+  identity: number;
+  model: number;
+  instructions: number;
+  tools: number;
+  permissions: number;
+  data_access: number;
+  network: number;
+  memory: number;
+  guardrails: number;
+  human_oversight: number;
+  inter_agent: number;
+  supply_chain: number;
+  runtime: number;
+}
+
+export interface SecurityAssessment {
+  schema_version: string;
+  assessment_time: string;
+  evidence_sources: string[];
+  domains: any;
+  /** Keyed by framework id: "owasp_ai_agents_2026" | "nist_ai_rmf" | "iso_42001" */
+  frameworks: Record<string, FrameworkAssessment>;
+  evidence_completeness: EvidenceCompleteness;
+  runtime_tests: any[];
+  drift?: any[];
+}
+
+export interface AgentControlReviewRow {
+  agentId: string;
+  name: string;
+  type: string | null;
+  posture: 'compliant' | 'partial' | 'non_compliant' | 'unassessed';
+  score: number;
+  pass: number;
+  partial: number;
+  fail: number;
+  evidenceTags: string[];
+}
+

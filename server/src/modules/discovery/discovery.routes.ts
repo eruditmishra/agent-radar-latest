@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as ctrl from "./discovery.controller";
+import * as securityCtrl from "../security/security.controller";
 import { requirePermission } from "../../rbac/rbac.middleware";
 
 /**
@@ -35,6 +36,15 @@ router.get  ("/agents/:agentId",              requirePermission("agents", "view"
 router.patch("/agents/:agentId/status",       requirePermission("agents", "approve"), ctrl.updateAgentStatusHandler);
 router.post("/agents/:agentId/request-approval", requirePermission("agents", "update"), ctrl.requestAgentApprovalHandler);
 router.post("/agents/:agentId/approve",          requirePermission("agents", "approve"), ctrl.approveAgentHandler);
+
+// ─── Security Assessment ──────────────────────────────────────────────────────
+router.get ("/agents/:agentId/security-assessment",         requirePermission("agents", "view"),    securityCtrl.getSecurityAssessmentHandler);
+router.post("/agents/:agentId/security-assessment/refresh", requirePermission("agents", "view"),    securityCtrl.refreshSecurityAssessmentHandler);
+router.get ("/agents/:agentId/security-assessment/drift",   requirePermission("agents", "view"),    securityCtrl.getSecurityDriftHandler);
+
+// ─── Multi-Framework Assessments (Governance & Compliance) ───────────────────
+router.get ("/frameworks",   requirePermission("assessments", "view"), securityCtrl.getFrameworksHandler);
+router.get ("/assessments",  requirePermission("assessments", "view"), securityCtrl.listAssessmentsHandler);
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 router.get  ("/models",           requirePermission("models", "view"),   ctrl.listModelsHandler);

@@ -62,6 +62,66 @@ export function mapSageMakerEndpointStatusDeep(status) {
 }
 
 /**
+ * Query IAM to determine blast radius of an agent's execution role
+ */
+export async function analyzeIamBlastRadius(awsXml, conn, roleArn, discoveryErrors = []) {
+  if (!roleArn) return null;
+  const roleName = roleNameFromArn(roleArn);
+  if (!roleName) return null;
+
+  try {
+    const xml = await awsXml({
+      conn,
+      service: "iam",
+      hostname: "iam.amazonaws.com",
+      method: "POST",
+      path: "/",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `Action=ListAttachedRolePolicies&Version=2010-05-08&RoleName=${encodeURIComponent(roleName)}`
+    });
+
+    const attachedPolicies = [];
+    const regex = /<PolicyArn>(.*?)<\/PolicyArn>/g;
+    let match;
+    while ((match = regex.exec(xml)) !== null) {
+      attachedPolicies.push(match[1]);
+    }
+
+    const overPermissioned = attachedPolicies.includes("arn:aws:iam::aws:policy/AdministratorAccess");
+    
+    return {
+      collection_status: "observed",
+      declared_permissions: attachedPolicies,
+      application_permissions: { value: [], evidence: [] },
+      delegated_permissions: { value: [], evidence: [] },
+      rbac_roles: { value: attachedPolicies, evidence: [{ fact: `Found ${attachedPolicies.length} attached policies`, source: "aws_iam" }] },
+      managed_identity_permissions: { value: [], evidence: [] },
+      over_permissioned,
+      privileged: overPermissioned,
+      write_capable: overPermissioned ? true : null,
+      delete_capable: overPermissioned ? true : null,
+      admin_capable: overPermissioned ? true : null,
+      cross_tenant: null,
+      credential_exposure_risk: "unknown",
+      confidence: 1.0,
+      evidence: [
+        { fact: `Analyzed IAM role ${roleName} using ListAttachedRolePolicies`, source: "aws_iam" },
+        ...(overPermissioned ? [{ fact: "AdministratorAccess policy is attached to agent role", source: "aws_iam" }] : [])
+      ],
+      limitations: ["Inline policies are not yet scanned", "Resource-based policies are not yet scanned"]
+    };
+  } catch (err) {
+    discoveryErrors.push({
+      resourceId: roleArn,
+      discoveryType: "iam-list-attached-policies",
+      discoveryStatus: err.permissionDenied ? "permission_denied" : "error",
+      error: sanitizeCloudError(err)
+    });
+    return null;
+  }
+}
+
+/**
  * Bedrock Agents GetAgent — official detail API.
  * GET https://bedrock-agent.{region}.amazonaws.com/agents/{agentId}/
  */
@@ -820,6 +880,7 @@ export function summarizeLambdaConfiguration(detail) {
  */
 export async function enrichAwsWithDeepScan({
   awsJson,
+  awsXml,
   conn,
   region,
   observations,
@@ -839,10 +900,33 @@ export async function enrichAwsWithDeepScan({
     const detail = await getBedrockAgent(awsJson, conn, region, obs.metadata.agentId, discoveryErrors);
     const summary = summarizeBedrockAgentDetail(detail);
     if (!summary) {
-      Object.assign(obs, attachAdversarialSurface(obs));
+      const agentErrors = discoveryErrors.filter((e) => e.resourceId === obs.metadata.agentId);
+      const isDenied = agentErrors.some((e) => e.discoveryStatus === "permission_denied");
+      const isError = agentErrors.some((e) => e.discoveryStatus === "error");
+      const planeHint = isDenied ? "permission_denied" : isError ? "error" : "not_accessed";
+      
+      obs.metadata = {
+        ...obs.metadata,
+        security_collection_hints: {
+          identity_plane: "not_accessed",
+          definition_plane: planeHint,
+          runtime_plane: "not_accessed"
+        }
+      };
+      
+      Object.assign(obs, attachAdversarialSurface(obs, {
+        evidence: [`Bedrock GetAgent scan failed: ${planeHint}`]
+      }));
       continue;
     }
     deepScanned += 1;
+
+    if (summary.identity?.arn) {
+      const iamPermissions = await analyzeIamBlastRadius(awsXml, conn, summary.identity.arn, discoveryErrors);
+      if (iamPermissions) {
+        summary.permissions = iamPermissions;
+      }
+    }
 
     const versions = await listBedrockAgentVersions(
       awsJson,
@@ -874,6 +958,10 @@ export async function enrichAwsWithDeepScan({
 
     obs.metadata = {
       ...obs.metadata,
+      security_collection_hints: {
+        identity_plane: "complete", // identity implicitly exists if we got the summary
+        definition_plane: "complete",
+      },
       deepScan: summary.deepScan,
       deepScanSchema: "aws-deep.v2",
       foundationModel: summary.foundationModel || obs.model,
@@ -929,6 +1017,7 @@ export async function enrichAwsWithDeepScan({
         knowledgeBases: attack.knowledgeBases,
         instructionText: summary.instructionFull || null,
         roleArn: summary.agentResourceRoleArn,
+        permissions: summary.permissions,
         guardrailConfiguration: summary.guardrailConfiguration,
         evidence: ["Adversarial surface built from Bedrock deep scan (aws-deep.v2)"]
       })

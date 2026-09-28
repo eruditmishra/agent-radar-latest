@@ -151,7 +151,6 @@ export interface AdversarialSurface {
     ownership_status: string | null;
   };
   owasp_hints: {
-    llm_top10: string[];
-    agentic_asi: string[];
+    agentic_ai: string[];
   };
 }

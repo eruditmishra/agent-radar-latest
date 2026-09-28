@@ -131,6 +131,15 @@ export const discoveryAPI = {
   getAgentFilters: () => api.get('/discovery/agents/filters'),
   getAgentDetails: (id: string) => api.get(`/discovery/agents/${id}`),
   getAgent: (id: string) => api.get(`/discovery/agents/${id}`),
+  getSecurityAssessment: (id: string, framework?: string) => api.get(`/discovery/agents/${id}/security-assessment`, { params: framework ? { framework } : {} }),
+  refreshSecurityAssessment: (id: string) => api.post(`/discovery/agents/${id}/security-assessment/refresh`),
+  getSecurityDrift: (id: string, params: Record<string, any> = {}) => api.get(`/discovery/agents/${id}/security-assessment/drift`, { params }),
+  getFrameworks: () => api.get<{ frameworks: import("../types/discovery").FrameworkMeta[] }>("/discovery/frameworks"),
+  getAssessments: (params: { framework: string }) =>
+    api.get<{ framework: import("../types/discovery").FrameworkMeta; agents: import("../types/discovery").AgentControlReviewRow[]; total: number }>(
+      "/discovery/assessments",
+      { params },
+    ),
   requestAgentApproval: (id: string, requested_status: string, request_remark: string) => api.post(`/discovery/agents/${id}/request-approval`, { requested_status, request_remark }),
   approveAgent: (id: string, action: string, approval_remark?: string, status?: string) => api.post(`/discovery/agents/${id}/approve`, { action, approval_remark, status }),
 

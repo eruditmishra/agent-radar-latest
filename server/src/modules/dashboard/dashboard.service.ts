@@ -1,4 +1,5 @@
 import { db } from "../../db/client";
+import { calculateAgentRiskScore } from "../security/riskScore";
 
 export async function getDashboardData(tenantId: string | null) {
   const tenantFilter = tenantId ? `tenant_id = $1` : `tenant_id IS NULL`;
@@ -7,15 +8,20 @@ export async function getDashboardData(tenantId: string | null) {
   // 1. Fetch Agents for Stats and Pie Charts
   const agentsQuery = `
     SELECT
-      status,
-      confidence_score,
-      model,
-      cloud_provider,
-      risk_indicators,
-      name,
-      internet_access
-    FROM discovered_agents
-    WHERE (${tenantFilter})
+      da.status,
+      da.confidence_score,
+      da.model,
+      da.cloud_provider,
+      da.name,
+      da.internet_access,
+      asa.domains,
+      asa.frameworks,
+      asa.evidence_completeness
+    FROM discovered_agents da
+    LEFT JOIN agent_security_assessments asa 
+      ON da.id = asa.agent_id 
+      ${tenantId ? "AND da.tenant_id = asa.tenant_id" : ""}
+    WHERE (da.${tenantFilter})
   `;
   const agentsRes = await db.query(agentsQuery, params);
   const agents = agentsRes.rows;
@@ -51,22 +57,19 @@ export async function getDashboardData(tenantId: string | null) {
     const providerName = agent.cloud_provider || "Unknown";
     providerCount[providerName] = (providerCount[providerName] || 0) + 1;
 
-    // Risk Calculation (Legacy logic matching)
-    let riskLevel = "Low";
-    const indicators = agent.risk_indicators || [];
-    if (indicators.includes("critical") || (agent.status === "shadow" && agent.internet_access)) {
-      riskLevel = "Critical";
-    } else if (indicators.includes("high") || agent.status === "shadow") {
-      riskLevel = "High";
-    } else if (indicators.includes("medium")) {
-      riskLevel = "Medium";
-    }
-    riskCount[riskLevel]++;
+    // Calculate Risk Score (0-100)
+    const riskBreakdown = calculateAgentRiskScore(agent, {
+      domains: agent.domains,
+      frameworks: agent.frameworks,
+      evidence_completeness: agent.evidence_completeness
+    });
+
+    riskCount[riskBreakdown.riskLevel]++;
 
     // Generate Alerts dynamically
-    if (riskLevel === "Critical" && agent.status === "shadow") {
+    if (riskBreakdown.riskLevel === "Critical" && agent.status === "shadow") {
       alerts.push({ sev: "critical", title: `Critical shadow AI: ${agent.name || 'Unknown Agent'}`, detail: `Shadow agent with critical risk indicators or internet access.` });
-    } else if (riskLevel === "High" && agent.status === "shadow") {
+    } else if (riskBreakdown.riskLevel === "High" && agent.status === "shadow") {
       alerts.push({ sev: "high", title: `High-risk shadow: ${agent.name || 'Unknown Agent'}`, detail: `Shadow agent detected without governance registration.` });
     }
   }

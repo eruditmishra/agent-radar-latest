@@ -76,8 +76,28 @@ export const AZURE_AI_TYPE_CONDITIONAL = [
   "Microsoft.HealthcareApis/services",
   "Microsoft.HealthcareApis/workspaces",
   "Microsoft.Logic/workflows",
-  "Microsoft.Insights/components",
   "Microsoft.Compute/virtualMachines",
+];
+
+/**
+ * Supporting infrastructure that can never itself host or be an AI agent, even
+ * when it sits in the same resource group / deployment and inherits a name or
+ * tag that mentions "agent" / "foundry" (e.g. a Key Vault or App Insights
+ * resource provisioned alongside a Foundry agent baseline template). Name/tag
+ * heuristics must not override this — these types are excluded unconditionally.
+ */
+export const AZURE_NEVER_AGENT_TYPES = [
+  "Microsoft.KeyVault/vaults",
+  "Microsoft.ManagedIdentity/userAssignedIdentities",
+  "Microsoft.Insights/components",
+  "Microsoft.Insights/actiongroups",
+  "Microsoft.Insights/diagnosticSettings",
+  "Microsoft.OperationalInsights/workspaces",
+  "Microsoft.OperationsManagement/solutions",
+  "Microsoft.Network",
+  "Microsoft.Authorization/roleAssignments",
+  "Microsoft.Resources/deployments",
+  "Microsoft.Storage/storageAccounts",
 ];
 
 export interface CategoryRule {
@@ -219,6 +239,21 @@ export interface ClassificationResult {
 export function classifyAzureResource(resource: any = {}): ClassificationResult {
   const { type, name, kind, tagBlob } = resourceSignalBlob(resource);
   const evidence: string[] = [];
+
+  if (azureTypeMatches(type, AZURE_NEVER_AGENT_TYPES)) {
+    return {
+      aiRelevant: false,
+      category: "non_ai",
+      confidence: 0.99,
+      evidence: [
+        `Azure type ${type} is supporting infrastructure, never an AI agent — name/tag heuristics do not apply`,
+      ],
+      layer: "non_ai",
+      alwaysAiType: false,
+      conditionalType: false,
+    };
+  }
+
   const alwaysAiType = azureTypeMatches(type, AZURE_AI_TYPE_ALWAYS);
   const conditionalType = azureTypeMatches(type, AZURE_AI_TYPE_CONDITIONAL);
   const rule = matchCategoryRule(resource);

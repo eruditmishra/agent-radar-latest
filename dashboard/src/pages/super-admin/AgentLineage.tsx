@@ -3,10 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { discoveryAPI, auditAPI } from '../../lib/api';
 import type { DiscoveredAgent } from '../../types/discovery';
 import {
-  ArrowLeft, AlertTriangle
+  ArrowLeft, AlertTriangle, Network
 } from 'lucide-react';
 
-type NodeType = 'agent' | 'account' | 'model' | 'role' | 'data' | 'risk';
+type NodeType = 'agent' | 'account' | 'model' | 'role' | 'data' | 'risk' | 'agents';
+
+interface RelatedAgentRef {
+  agentId: string;
+  name?: string | null;
+}
 
 export default function AgentLineage() {
   const { id } = useParams();
@@ -61,6 +66,16 @@ export default function AgentLineage() {
         ? "0.00"
         : "Unknown";
 
+  // Sub-agent / orchestrator relationships (Azure AI Foundry "connected
+  // agent" pattern — see azure.scanner.ts Phase 2). Populated on
+  // metadata.subAgents (agents this one calls) and metadata.calledByAgents
+  // (agents that call this one as a sub-agent).
+  const subAgents: RelatedAgentRef[] = Array.isArray(metadata.subAgents) ? metadata.subAgents : [];
+  const calledByAgents: RelatedAgentRef[] = Array.isArray(metadata.calledByAgents) ? metadata.calledByAgents : [];
+  const isOrchestrator = subAgents.length > 0;
+  const isSubAgent = metadata.isSubAgent === true || calledByAgents.length > 0;
+  const hasAgentRelationships = isOrchestrator || isSubAgent;
+
   // Coordinates for the graph nodes
   const nodes = {
     agent: { x: '50%', y: '45%' },
@@ -69,6 +84,7 @@ export default function AgentLineage() {
     role: { x: '20%', y: '70%' },
     data: { x: '80%', y: '70%' },
     risk: { x: '50%', y: '85%' },
+    agents: { x: '50%', y: '8%' },
   };
 
   const NodeCard = ({ type, x, y, icon: Icon, title, subtitle, topLabel, bg, iconColor }: any) => {
@@ -260,6 +276,54 @@ export default function AgentLineage() {
             </div>
           </>
         );
+      case 'agents':
+        return (
+          <>
+            <h2 className="text-sm font-bold text-slate-800 pb-3 border-b border-slate-200 mb-6">Agent-to-Agent Relationships</h2>
+            <div className="space-y-6">
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Role</div>
+                <div className="text-sm font-semibold text-slate-800">
+                  {isOrchestrator && isSubAgent
+                    ? 'Orchestrator & Sub-Agent'
+                    : isOrchestrator
+                      ? 'Orchestrator'
+                      : isSubAgent
+                        ? 'Sub-Agent'
+                        : 'Standalone'}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">
+                  Calls Sub-Agents ({subAgents.length})
+                </div>
+                {subAgents.length ? (
+                  <ul className="space-y-1">
+                    {subAgents.map((a) => (
+                      <li key={a.agentId} className="text-sm font-semibold text-slate-800">{a.name || a.agentId}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-slate-400">None</div>
+                )}
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">
+                  Called By ({calledByAgents.length})
+                </div>
+                {calledByAgents.length ? (
+                  <ul className="space-y-1">
+                    {calledByAgents.map((a) => (
+                      <li key={a.agentId} className="text-sm font-semibold text-slate-800">{a.name || a.agentId}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-slate-400">None</div>
+                )}
+              </div>
+            </div>
+          </>
+        );
       default:
         return null;
     }
@@ -283,6 +347,12 @@ export default function AgentLineage() {
           </div>
         </div>
         <div className="flex gap-2">
+          {isOrchestrator && (
+            <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-700 border border-indigo-200">ORCHESTRATOR</span>
+          )}
+          {isSubAgent && (
+            <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">SUB-AGENT</span>
+          )}
           {agent.status === 'shadow' && (
             <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">SHADOW AI</span>
           )}
@@ -304,6 +374,9 @@ export default function AgentLineage() {
             <line x1={nodes.agent.x} y1={nodes.agent.y} x2={nodes.role.x} y2={nodes.role.y} stroke="#94a3b8" strokeWidth="2" strokeDasharray="4 4" />
             <line x1={nodes.agent.x} y1={nodes.agent.y} x2={nodes.data.x} y2={nodes.data.y} stroke="#94a3b8" strokeWidth="2" strokeDasharray="4 4" />
             <line x1={nodes.agent.x} y1={nodes.agent.y} x2={nodes.risk.x} y2={nodes.risk.y} stroke="#94a3b8" strokeWidth="2" strokeDasharray="4 4" />
+            {hasAgentRelationships && (
+              <line x1={nodes.agent.x} y1={nodes.agent.y} x2={nodes.agents.x} y2={nodes.agents.y} stroke="#818cf8" strokeWidth="2" />
+            )}
           </svg>
 
           {/* Nodes */}
@@ -347,13 +420,29 @@ export default function AgentLineage() {
             subtitle={`Score: ${shadowScore}`} 
           />
 
-          <NodeCard 
-            type="agent" 
-            x={nodes.agent.x} y={nodes.agent.y} 
-            topLabel="AI" bg="bg-indigo-100" iconColor="text-indigo-700" 
+          <NodeCard
+            type="agent"
+            x={nodes.agent.x} y={nodes.agent.y}
+            topLabel="AI" bg="bg-indigo-100" iconColor="text-indigo-700"
             title={providerLabel}
             subtitle={`Framework: ${agent.deployment_type || 'Unknown'}`}
           />
+
+          {hasAgentRelationships && (
+            <NodeCard
+              type="agents"
+              x={nodes.agents.x} y={nodes.agents.y}
+              icon={Network} bg="bg-purple-100" iconColor="text-purple-700"
+              title={isOrchestrator ? 'Calls Sub-Agents' : 'Sub-Agent Of'}
+              subtitle={
+                isOrchestrator && isSubAgent
+                  ? `${subAgents.length} sub-agent(s), ${calledByAgents.length} parent(s)`
+                  : isOrchestrator
+                    ? `${subAgents.length} sub-agent(s)`
+                    : `${calledByAgents.length} parent agent(s)`
+              }
+            />
+          )}
         </div>
 
         {/* Right Side: Drawer */}

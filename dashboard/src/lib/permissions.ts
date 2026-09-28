@@ -32,7 +32,8 @@ export type Resource =
   | "user_management"
   | "agent_audit_logs"
   | "scanning"
-  | "manual_approval";
+  | "manual_approval"
+  | "assessments";
 
 export type Action =
   | "view"
@@ -99,6 +100,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "agent_audit_logs", actions: ["view", "export"] },
     { resource: "scanning", actions: ["view", "manage"] },
     { resource: "manual_approval", actions: ["approve"] },
+    { resource: "assessments", actions: ["view"] },
   ],
 
   admin: [
@@ -116,6 +118,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "user_management", actions: ["view", "create", "update"] },
     { resource: "agent_audit_logs", actions: ["view", "export"] },
     { resource: "scanning", actions: ["view", "manage"] },
+    { resource: "assessments", actions: ["view"] },
   ],
 
   ciso: [
@@ -127,6 +130,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "integrations", actions: ["view"] },
     { resource: "discovery_results", actions: ["view"] },
     { resource: "agent_audit_logs", actions: ["view", "export"] },
+    { resource: "assessments", actions: ["view"] },
   ],
 
   security_analyst: [
@@ -140,6 +144,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "user_management", actions: ["view", "create", "update"] },
     { resource: "agent_audit_logs", actions: ["view"] },
     { resource: "scanning", actions: ["view"] },
+    { resource: "assessments", actions: ["view"] },
   ],
 
   auditor: [
@@ -151,6 +156,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     { resource: "integrations", actions: ["view"] },
     { resource: "discovery_results", actions: ["view"] },
     { resource: "agent_audit_logs", actions: ["view", "export"] },
+    { resource: "assessments", actions: ["view"] },
   ],
 };
 

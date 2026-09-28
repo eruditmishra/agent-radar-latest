@@ -24,6 +24,8 @@ import DiscoveredModels from './pages/super-admin/DiscoveredModels';
 import Integrations from './pages/super-admin/Integrations';
 import SSOConfig from './pages/super-admin/SSOConfig';
 import AutoDiscovery from './pages/super-admin/AutoDiscovery';
+import Assessments from './pages/super-admin/Assessments';
+import AssessmentDetail from './pages/super-admin/AssessmentDetail';
 
 export default function App() {
   useTelemetry();
@@ -83,6 +85,12 @@ export default function App() {
         {/* ── Auto Discovery Configuration ───────────────────────────────── */}
         <Route element={<ProtectedRoute requirePermission={{ resource: 'auto_discovery_config', action: 'view', featureName: 'Auto Discovery Configuration' }} />}>
           <Route path="/auto-discovery" element={<AutoDiscovery />} />
+        </Route>
+
+        {/* ── Governance & Compliance ─────────────────────────────────────── */}
+        <Route element={<ProtectedRoute requirePermission={{ resource: 'assessments', action: 'view', featureName: 'Assessments' }} />}>
+          <Route path="/assessments" element={<Assessments />} />
+          <Route path="/assessments/:agentId" element={<AssessmentDetail />} />
         </Route>
 
         {/* ── User Management ────────────────────────────────────────────── */}
