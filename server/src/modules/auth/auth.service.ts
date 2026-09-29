@@ -27,7 +27,7 @@ import { MFA_ENFORCEMENT_ENABLED } from "../../rbac/rbac.middleware";
 
 const ACCESS_TOKEN_TTL = "15m";
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes of inactivity ends the session
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes of inactivity ends the session
 
 function signAccessToken(
   payload: Omit<AccessTokenPayload, "type">,

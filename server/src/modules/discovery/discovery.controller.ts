@@ -183,6 +183,16 @@ export const listAgentsHandler = asyncHandler(async (req, res) => {
     search:        req.query.search        as string | undefined,
     sortBy:        req.query.sortBy        as string | undefined,
     sortOrder:     req.query.sortOrder     as 'asc' | 'desc' | undefined,
+    // hasModel=true  → only records WITH a model (real agents)
+    // hasModel=false → only records WITHOUT a model (pure identities)
+    hasModel:      req.query.hasModel !== undefined
+                     ? req.query.hasModel === 'true'
+                     : undefined,
+    // excludeIdentities=true → exclude (deployment_type=identity AND model IS NULL) records
+    // This keeps all cloud agents even without a model, drops pure service principals
+    excludeIdentities: req.query.excludeIdentities !== undefined
+                         ? req.query.excludeIdentities === 'true'
+                         : undefined,
     ...paginationOpts(req),
   });
   res.json({ agents: result.agents, total: result.total });

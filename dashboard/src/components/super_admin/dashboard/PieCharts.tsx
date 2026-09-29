@@ -73,7 +73,7 @@ export default function PieCharts({ charts }: PieChartsProps) {
                     />
                   ))}
                   <Label
-                    value={charts.models.reduce((a, b) => a + b.value, 0)}
+                    value={charts.models.length}
                     position="center"
                     className="font-display text-2xl font-bold fill-text-primary"
                   />
@@ -126,11 +126,6 @@ export default function PieCharts({ charts }: PieChartsProps) {
                       fill={RISK_COLORS[entry.name] || COLORS[0]}
                     />
                   ))}
-                  <Label
-                    value={charts.risk.reduce((a, b) => a + b.value, 0)}
-                    position="center"
-                    className="font-display text-2xl font-bold fill-text-primary"
-                  />
                 </Pie>
                 <Tooltip
                   contentStyle={{
@@ -185,11 +180,6 @@ export default function PieCharts({ charts }: PieChartsProps) {
                     }
                     return <Cell key={`cell-${index}`} fill={color} />;
                   })}
-                  <Label
-                    value={charts.provider.reduce((a, b) => a + b.value, 0)}
-                    position="center"
-                    className="font-display text-2xl font-bold fill-text-primary"
-                  />
                 </Pie>
                 <Tooltip
                   contentStyle={{

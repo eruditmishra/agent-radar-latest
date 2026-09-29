@@ -62,6 +62,7 @@ export default function ShadowAgents() {
       .getAgents({
         ...activeFilters,
         status: "shadow,conditionally_shadow,under_review,flagged,deprecated", // Force statuses
+        excludeIdentities: true, // Exclude pure Entra identity records (no model)
         sortBy,
         sortOrder,
         limit: PAGE_SIZE,

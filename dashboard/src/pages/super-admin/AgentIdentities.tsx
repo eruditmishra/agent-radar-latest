@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { discoveryAPI, dashboardAPI } from "../../lib/api";
+import { discoveryAPI } from "../../lib/api";
 import type { DiscoveredAgent, AgentFilters } from "../../types/discovery";
-import type { VerifiedAgentStats } from "../../types/dashboard";
 import AgentsFilterBar from "../../components/super_admin/agents/AgentsFilterBar";
 import AgentsTable from "../../components/super_admin/agents/AgentsTable";
 import Pagination from "../../components/super_admin/agents/Pagination";
-import StatCard from "../../components/shared/StatCard";
 import UpdateAgentStatusModal from "../../components/super_admin/agents/UpdateAgentStatusModal";
+import StatCard from "../../components/shared/StatCard";
 
 const PAGE_SIZE = 20;
 
-export default function VerifiedAgents() {
+export default function AgentIdentities() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [agents, setAgents] = useState<DiscoveredAgent[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<VerifiedAgentStats | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<DiscoveredAgent | null>(null);
 
@@ -29,6 +27,13 @@ export default function VerifiedAgents() {
     statuses: [],
   });
 
+  // Stats derived from the loaded data
+  const [identityStats, setIdentityStats] = useState<{
+    total: number;
+    shadow: number;
+    approved: number;
+  } | null>(null);
+
   // Extract state from URL
   const activeFilters = {
     search: searchParams.get("search") || "",
@@ -36,35 +41,44 @@ export default function VerifiedAgents() {
     provider: searchParams.get("provider") || "",
     owner: searchParams.get("owner") || "",
     type: searchParams.get("type") || "",
-    status: searchParams.get("status") || "approved", // UI prop
+    status: searchParams.get("status") || "",
   };
   const sortBy = searchParams.get("sortBy") || "created_at";
   const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
   const page = parseInt(searchParams.get("page") || "1", 10);
 
-  // Fetch filter options and stats on mount
+  // Fetch filter options on mount + quick stats
   useEffect(() => {
     discoveryAPI
       .getAgentFilters()
-      .then((res) => {
-        setFilterOptions(res.data);
-      })
+      .then((res) => setFilterOptions(res.data))
       .catch((err) => console.error("Failed to load filter options", err));
 
-    dashboardAPI
-      .getVerifiedStats()
-      .then((res) => setStats(res.data))
-      .catch((err) => console.error("Failed to load verified stats", err));
+    // Fetch all identity records for stats (no pagination)
+    discoveryAPI
+      .getAgents({ hasModel: false, limit: 1000, offset: 0 })
+      .then((res) => {
+        const all = res.data.agents as DiscoveredAgent[];
+        setIdentityStats({
+          total: res.data.total,
+          shadow: all.filter((a) =>
+            ["shadow", "flagged", "under_review", "deprecated"].includes(a.status)
+          ).length,
+          approved: all.filter((a) =>
+            ["approved", "conditionally_approved"].includes(a.status)
+          ).length,
+        });
+      })
+      .catch(console.error);
   }, []);
 
-  // Fetch data when URL changes
+  // Fetch paged data when URL changes
   useEffect(() => {
     setLoading(true);
     discoveryAPI
       .getAgents({
         ...activeFilters,
-        status: "approved,conditionally_approved", // Force statuses
-        excludeIdentities: true, // Exclude pure Entra identity records (no model)
+        hasModel: false, // Only modelless records — pure Entra identities / service principals
         sortBy,
         sortOrder,
         limit: PAGE_SIZE,
@@ -76,18 +90,17 @@ export default function VerifiedAgents() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to load agents", err);
+        console.error("Failed to load identities", err);
         setLoading(false);
       });
   }, [searchParams]);
 
-  // Handlers to update URL
   const handleFilterChange = (key: string, value: string) => {
-    if (key === 'status') return; // Disable status change
+    if (key === "type") return; // Always locked to identity
     const newParams = new URLSearchParams(searchParams);
     if (value) newParams.set(key, value);
     else newParams.delete(key);
-    newParams.set("page", "1"); // Reset to page 1 on filter change
+    newParams.set("page", "1");
     setSearchParams(newParams);
   };
 
@@ -128,59 +141,68 @@ export default function VerifiedAgents() {
       } else {
         res = await discoveryAPI.approveAgent(agentId, actionType, remark, payload);
       }
-      
+
       setIsModalOpen(false);
       setSelectedAgent(null);
 
-      // Refresh locally
       const updatedAgent = res.data.agent;
       setAgents((prev) => prev.map((a) => (a.id === agentId ? updatedAgent : a)));
-      
-      dashboardAPI.getVerifiedStats().then((r) => setStats(r.data)).catch(console.error);
     } catch (err) {
-      console.error("Failed to update agent status:", err);
+      console.error("Failed to update identity status:", err);
     }
   };
 
   return (
     <div className="p-6 flex flex-col h-full overflow-y-auto animate-view-in">
-      <h1 className="text-[20px] font-display font-bold text-text-primary tracking-tight mb-4 select-none flex items-center gap-2">
-        <div className="w-1.5 h-5 bg-green rounded-full"></div>
-        Verified Agents
-      </h1>
+      <div className="mb-4">
+        <h1 className="text-[20px] font-display font-bold text-text-primary tracking-tight select-none flex items-center gap-2">
+          <div className="w-1.5 h-5 bg-purple-500 rounded-full"></div>
+          Agent Identities
+        </h1>
+        <p className="text-[12px] text-text-muted mt-1 ml-4">
+          Azure Entra service principals and managed identities registered for agents —
+          distinct from the agent workloads themselves.
+        </p>
+      </div>
 
-      {stats && (
-        <div className="grid grid-cols-4 gap-4 mb-4 shrink-0">
+      {identityStats && (
+        <div className="grid grid-cols-3 gap-4 mb-4 shrink-0">
           <StatCard
-            color="green"
-            label="Total Verified Agents"
-            value={stats.totalVerified}
-            sub="All verified agents"
-          />
-          <StatCard
-            color="brand"
-            label="Auto Verified Agents"
-            value={stats.autoVerified}
-            sub="Automatically verified"
+            color="purple"
+            label="TOTAL IDENTITIES"
+            value={identityStats.total}
+            sub="All discovered agent identities"
           />
           <StatCard
             color="amber"
-            label="Conditionally Verified"
-            value={stats.conditionallyVerified}
-            sub="Manually approved"
+            label="UNREVIEWED"
+            value={identityStats.shadow}
+            sub="Shadow or flagged identities"
           />
           <StatCard
-            color="purple"
-            label="Under Review Agents"
-            value={stats.underReview}
-            sub="Status change requested"
+            color="green"
+            label="APPROVED"
+            value={identityStats.approved}
+            sub="Verified agent identities"
           />
         </div>
       )}
 
+      {/* Info callout */}
+      <div className="mb-4 flex items-start gap-3 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-[12px] text-purple-800">
+        <svg className="w-4 h-4 mt-0.5 shrink-0 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+        </svg>
+        <span>
+          These are <strong>agent identity registrations</strong> (Entra App Registrations, Managed Identities)
+          associated with AI workloads discovered on Azure. They are <strong>not agent workloads themselves</strong> — see{" "}
+          <a href="/agents" className="underline font-semibold text-purple-700 hover:text-purple-900">Discovered Agents</a> for actual AI agent instances.
+        </span>
+      </div>
+
       <AgentsFilterBar
-        filters={{...filterOptions, statuses: []}} // hide status filter
-        activeFilters={{...activeFilters, status: 'approved'}}
+        filters={{ ...filterOptions, types: [], statuses: [] }}
+        activeFilters={{ ...activeFilters, type: "" }}
         onChange={handleFilterChange}
         onClear={handleClearFilters}
       />
@@ -224,4 +246,3 @@ export default function VerifiedAgents() {
     </div>
   );
 }
-

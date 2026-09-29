@@ -72,7 +72,15 @@ export default function AssessmentPanel({ agentId }: AssessmentPanelProps) {
 
   if (!assessment) return null;
 
-  const frameworks = Object.values(assessment.frameworks ?? {});
+  const getSortWeight = (id: string) => {
+    const lowerId = id.toLowerCase();
+    if (lowerId.includes("owasp")) return 1;
+    if (lowerId.includes("nist")) return 2;
+    if (lowerId.includes("iso")) return 3;
+    return 4;
+  };
+
+  const frameworks = Object.values(assessment.frameworks ?? {}).sort((a, b) => getSortWeight(a.meta.id) - getSortWeight(b.meta.id));
   const active = assessment.frameworks?.[activeFramework] ?? frameworks[0];
   const completeness = Math.round((assessment.evidence_completeness?.overall ?? 0) * 100);
 

@@ -966,7 +966,7 @@ export async function discoverAwsConnector(conn) {
         service: "bedrock-agent",
         region: creds.region,
         classification,
-        model: agent.foundationModel || "bedrock-agent",
+        model: agent.foundationModel || null,
         fingerprint: `aws-agent:${creds.accountId}:${agentId}`,
         discoveryLayer: "agent",
         inventoryClass: "ai_cloud_agent",
@@ -1037,7 +1037,7 @@ export async function discoverAwsConnector(conn) {
         service: "bedrock-agent",
         region: creds.region,
         classification,
-        model: "bedrock-knowledge-base",
+        model: null, // Knowledge bases are data stores, not AI models
         fingerprint: `aws-runtime:${id}`,
         discoveryLayer: "ai_resource",
         evidence: [
@@ -1134,7 +1134,7 @@ export async function discoverAwsConnector(conn) {
         service: "lambda",
         region: creds.region,
         classification,
-        model: "lambda-ai-workload",
+        model: null, // Lambda is a compute runtime, not an AI model
         fingerprint: `aws-runtime:${id}`,
         discoveryLayer: "agent_candidate",
         inventoryClass: "ai_cloud_agent",

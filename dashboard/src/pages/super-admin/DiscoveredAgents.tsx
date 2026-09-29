@@ -63,6 +63,7 @@ export default function DiscoveredAgents() {
     discoveryAPI
       .getAgents({
         ...activeFilters,
+        excludeIdentities: true, // Exclude pure Entra identity records (no model) — those live in /identities
         sortBy,
         sortOrder,
         limit: PAGE_SIZE,

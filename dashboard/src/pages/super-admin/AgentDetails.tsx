@@ -496,7 +496,7 @@ export default function AgentDetails() {
             />
             Assessments
           </button>
-          <button
+          {/* <button
             onClick={() => setActiveTab("risk")}
             className={`pb-3 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "risk" ? "border-blue text-blue" : "border-transparent text-slate-500 hover:text-slate-800"}`}
           >
@@ -505,7 +505,7 @@ export default function AgentDetails() {
               className={activeTab === "risk" ? "text-blue" : "text-slate-400"}
             />
             Risk Breakdown
-          </button>
+          </button> */}
         </div>
 
         {activeTab === "owasp" ? (

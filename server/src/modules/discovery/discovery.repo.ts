@@ -587,6 +587,10 @@ export async function listDiscoveredAgents(
     sortOrder?: 'asc' | 'desc';
     limit?: number;
     offset?: number;
+    /** true → only rows WITH a model (real agents); false → only rows WITHOUT a model (pure identities) */
+    hasModel?: boolean;
+    /** true → exclude records that are deployment_type=identity AND model IS NULL (pure service principals) */
+    excludeIdentities?: boolean;
   } = {},
 ): Promise<{ agents: DiscoveredAgent[], total: number }> {
   const conds: string[] = [];
@@ -613,6 +617,15 @@ export async function listDiscoveredAgents(
   if (opts.model)        { conds.push(`da.model = $${i++}`);         params.push(opts.model); }
   if (opts.owner)        { conds.push(`da.owner = $${i++}`);         params.push(opts.owner); }
   if (opts.type)         { conds.push(`da.deployment_type = $${i++}`); params.push(opts.type); }
+  // hasModel=true  → must have a model (real AI agent workload)
+  // hasModel=false → must NOT have a model (pure identity / service principal)
+  if (opts.hasModel === true)  { conds.push(`da.model IS NOT NULL AND da.model <> ''`); }
+  if (opts.hasModel === false) { conds.push(`(da.model IS NULL OR da.model = '')`); }
+  // excludeIdentities=true → exclude records that are (deployment_type='identity' AND model IS NULL)
+  // This keeps all cloud agents (even those without a model) while dropping pure service principals
+  if (opts.excludeIdentities === true) {
+    conds.push(`NOT (da.deployment_type = 'identity' AND (da.model IS NULL OR da.model = ''))`);
+  }
   
   if (opts.search) {
     const term = `%${opts.search}%`;

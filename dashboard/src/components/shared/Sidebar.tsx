@@ -9,6 +9,7 @@ import {
   Users,
   Search,
   FileText,
+  Fingerprint,
 } from "lucide-react";
 import { usePermission, useRoleDisplayName } from "../../hooks/usePermission";
 import useStore from "../../store/useStore";
@@ -123,6 +124,13 @@ export default function Sidebar() {
                   className={({ isActive }) => subNavClass(isActive)}
                 >
                   Verified Agents
+                </NavLink>
+                <NavLink
+                  to="/identities"
+                  className={({ isActive }) => subNavClass(isActive)}
+                >
+                  <Fingerprint size={12} className="shrink-0" />
+                  Identities
                 </NavLink>
               </div>
             </div>

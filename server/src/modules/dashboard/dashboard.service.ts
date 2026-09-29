@@ -21,7 +21,7 @@ export async function getDashboardData(tenantId: string | null) {
     LEFT JOIN agent_security_assessments asa 
       ON da.id = asa.agent_id 
       ${tenantId ? "AND da.tenant_id = asa.tenant_id" : ""}
-    WHERE (da.${tenantFilter})
+    WHERE (da.${tenantFilter}) AND NOT (da.deployment_type = 'identity' AND (da.model IS NULL OR da.model = ''))
   `;
   const agentsRes = await db.query(agentsQuery, params);
   const agents = agentsRes.rows;
@@ -141,7 +141,7 @@ export async function getShadowAgentStats(tenantId: string | null) {
       COUNT(*) FILTER (WHERE (a.owner IS NULL OR TRIM(a.owner) = '') AND m.validation_status = 'approved') as ownerless
     FROM discovered_agents a
     LEFT JOIN discovered_models m ON a.model = m.name AND (a.tenant_id = m.tenant_id OR (a.tenant_id IS NULL AND m.tenant_id IS NULL))
-    WHERE a.status NOT IN ('approved', 'conditionally_approved') AND (a.${tenantFilter})
+    WHERE a.status NOT IN ('approved', 'conditionally_approved') AND (a.${tenantFilter}) AND NOT (a.deployment_type = 'identity' AND (a.model IS NULL OR a.model = ''))
   `;
   const res = await db.query(query, params);
   const row = res.rows[0];
@@ -189,7 +189,7 @@ export async function getVerifiedAgentStats(tenantId: string | null) {
       COUNT(*) FILTER (WHERE status = 'conditionally_approved') as conditionally_verified,
       COUNT(*) FILTER (WHERE status = 'under_review') as under_review
     FROM discovered_agents
-    WHERE ${tenantFilter}
+    WHERE ${tenantFilter} AND NOT (deployment_type = 'identity' AND (model IS NULL OR model = ''))
   `;
   
   const res = await db.query(query, params);

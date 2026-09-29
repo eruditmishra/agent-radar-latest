@@ -6,6 +6,7 @@ import AppShell from './components/shared/AppShell';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 import useTelemetry from './hooks/useTelemetry';
 import useIdleTimeout from './hooks/useIdleTimeout';
+import IdleWarningModal from './components/shared/IdleWarningModal';
 import { getDefaultRoute } from './lib/permissions';
 
 // ── Shared Pages ──────────────────────────────────────────────────────────────
@@ -16,6 +17,7 @@ import AdminDashboard from './pages/super-admin/Dashboard';
 import DiscoveredAgents from './pages/super-admin/DiscoveredAgents';
 import ShadowAgents from './pages/super-admin/ShadowAgents';
 import VerifiedAgents from './pages/super-admin/VerifiedAgents';
+import AgentIdentities from './pages/super-admin/AgentIdentities';
 import AgentDetails from './pages/super-admin/AgentDetails';
 import NewAgentDetails from './pages/super-admin/NewAgentDetails';
 import AgentFindings from './pages/super-admin/AgentFindings';
@@ -34,8 +36,9 @@ export default function App() {
   const isLoggedIn = useStore((s) => s.isLoggedIn);
   const mfaPending = useStore((s) => s.mfaPending);
   const user = useStore((s) => s.user);
+  const logout = useStore((s) => s.logout);
 
-  useIdleTimeout(isLoggedIn && !mfaPending);
+  const { showWarning, secondsLeft, stayLoggedIn } = useIdleTimeout(isLoggedIn && !mfaPending);
 
   if (mfaPending) {
     return <MfaGate />;
@@ -46,7 +49,16 @@ export default function App() {
   }
 
   return (
-    <Routes>
+    <>
+      {showWarning && (
+        <IdleWarningModal
+          secondsLeft={secondsLeft}
+          onStayLoggedIn={stayLoggedIn}
+          onLogoutNow={logout}
+        />
+      )}
+
+      <Routes>
       <Route element={<AppShell />}>
         {/* ── Dashboard ──────────────────────────────────────────────────── */}
         <Route element={<ProtectedRoute requirePermission={{ resource: 'dashboard', action: 'view', featureName: 'Dashboard' }} />}>
@@ -68,6 +80,11 @@ export default function App() {
 
         <Route element={<ProtectedRoute requirePermission={{ resource: 'verified_agents', action: 'view', featureName: 'Verified Agents' }} />}>
           <Route path="/agents/verified" element={<VerifiedAgents />} />
+        </Route>
+
+        {/* ── Identities — Azure Entra agent identities ────────────────────── */}
+        <Route element={<ProtectedRoute requirePermission={{ resource: 'agents', action: 'view', featureName: 'Agent Identities' }} />}>
+          <Route path="/identities" element={<AgentIdentities />} />
         </Route>
 
         {/* ── Models ─────────────────────────────────────────────────────── */}
@@ -132,6 +149,7 @@ export default function App() {
 
       {/* Catch-all fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
