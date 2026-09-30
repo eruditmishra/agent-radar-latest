@@ -109,39 +109,35 @@ export default function PieCharts({ charts }: PieChartsProps) {
               No data available
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={charts.risk}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={75}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {charts.risk.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={RISK_COLORS[entry.name] || COLORS[0]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid var(--glass-border)",
-                    fontSize: "12px",
-                    background: "rgba(255,255,255,0.9)",
-                    backdropFilter: "blur(8px)",
-                  }}
-                />
-                <Legend
-                  iconType="circle"
-                  wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="space-y-4 mt-2">
+              {(() => {
+                const maxRisk = Math.max(...charts.risk.map((r) => r.value), 1);
+                return charts.risk.map((entry) => {
+                  const pct = Math.round((entry.value / maxRisk) * 100);
+                  return (
+                    <div key={entry.name}>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="font-semibold text-text-primary">
+                          {entry.name}
+                        </span>
+                        <span className="text-text-muted font-mono">
+                          {entry.value}
+                        </span>
+                      </div>
+                      <div className="h-2 bg-black/5 rounded-full overflow-hidden border border-glass-border">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${pct}%`,
+                            backgroundColor: RISK_COLORS[entry.name] || COLORS[0],
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           )}
         </div>
       </div>
@@ -180,6 +176,11 @@ export default function PieCharts({ charts }: PieChartsProps) {
                     }
                     return <Cell key={`cell-${index}`} fill={color} />;
                   })}
+                  <Label
+                    value={charts.provider.length}
+                    position="center"
+                    className="font-display text-2xl font-bold fill-text-primary"
+                  />
                 </Pie>
                 <Tooltip
                   contentStyle={{

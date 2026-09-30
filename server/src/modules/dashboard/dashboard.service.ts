@@ -84,7 +84,7 @@ export async function getDashboardData(tenantId: string | null) {
     { name: 'High', value: riskCount.High },
     { name: 'Medium', value: riskCount.Medium },
     { name: 'Low', value: riskCount.Low },
-  ].filter(d => d.value > 0);
+  ];
 
   // 2. Fetch Recent Scans
   const scansQuery = `
