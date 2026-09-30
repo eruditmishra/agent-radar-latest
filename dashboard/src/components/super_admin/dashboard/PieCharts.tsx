@@ -41,63 +41,6 @@ export default function PieCharts({ charts }: PieChartsProps) {
 
   return (
     <div className="grid grid-cols-3 gap-4">
-      {/* Models */}
-      <div
-        onClick={() => navigate("/models")}
-        className="bg-glass-white backdrop-blur-glass border border-glass-border rounded-r16 shadow-glass p-5 flex flex-col cursor-pointer hover:-translate-y-0.5 transition-transform"
-      >
-        <div className="font-semibold text-text-primary mb-2 text-[13px]">
-          Models Distribution
-        </div>
-        <div className="flex-1 w-full min-h-[220px]">
-          {charts.models.length === 0 ? (
-            <div className="h-full flex items-center justify-center text-text-muted text-[12px]">
-              No data available
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={charts.models}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={75}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {charts.models.map((_, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                  <Label
-                    value={charts.models.length}
-                    position="center"
-                    className="font-display text-2xl font-bold fill-text-primary"
-                  />
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid var(--glass-border)",
-                    fontSize: "12px",
-                    background: "rgba(255,255,255,0.9)",
-                    backdropFilter: "blur(8px)",
-                  }}
-                  itemStyle={{ color: "var(--text-primary)" }}
-                />
-                <Legend
-                  iconType="circle"
-                  wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
       {/* Risk Level */}
       <div className="bg-glass-white backdrop-blur-glass border border-glass-border rounded-r16 shadow-glass p-5 flex flex-col">
         <div className="font-semibold text-text-primary mb-2 text-[13px]">
@@ -159,7 +102,6 @@ export default function PieCharts({ charts }: PieChartsProps) {
                   data={charts.provider}
                   cx="50%"
                   cy="50%"
-                  innerRadius={55}
                   outerRadius={75}
                   paddingAngle={2}
                   dataKey="value"
@@ -176,8 +118,59 @@ export default function PieCharts({ charts }: PieChartsProps) {
                     }
                     return <Cell key={`cell-${index}`} fill={color} />;
                   })}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid var(--glass-border)",
+                    fontSize: "12px",
+                    background: "rgba(255,255,255,0.9)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                />
+                <Legend
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Models */}
+      <div
+        onClick={() => navigate("/models")}
+        className="bg-glass-white backdrop-blur-glass border border-glass-border rounded-r16 shadow-glass p-5 flex flex-col cursor-pointer hover:-translate-y-0.5 transition-transform"
+      >
+        <div className="font-semibold text-text-primary mb-2 text-[13px]">
+          Models Distribution
+        </div>
+        <div className="flex-1 w-full min-h-[220px]">
+          {charts.models.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-text-muted text-[12px]">
+              No data available
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={charts.models}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={75}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {charts.models.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
                   <Label
-                    value={charts.provider.length}
+                    value={charts.models.length}
                     position="center"
                     className="font-display text-2xl font-bold fill-text-primary"
                   />
@@ -190,6 +183,7 @@ export default function PieCharts({ charts }: PieChartsProps) {
                     background: "rgba(255,255,255,0.9)",
                     backdropFilter: "blur(8px)",
                   }}
+                  itemStyle={{ color: "var(--text-primary)" }}
                 />
                 <Legend
                   iconType="circle"
